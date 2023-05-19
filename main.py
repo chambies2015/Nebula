@@ -5,13 +5,21 @@ import json
 import tokens
 from ampapi.ampapi import AMPAPI
 import aiohttp
-
+from discord.ext.commands import check
 
 bot_token = tokens.bot_token
 intents = discord.Intents.all()
 bot = commands.Bot(command_prefix='$', intents=intents)
 bot.remove_command('help')
 
+allowed_channels = ["1014955844913332334", "939660290172268583"]
+
+
+def is_allowed_channel(ctx):
+    return str(ctx.channel.id) in allowed_channels
+
+
+bot.add_check(check(is_allowed_channel))
 
 API = AMPAPI("http://localhost:8080/")
 url_login = "http://localhost:8080/API/Core/Login"
@@ -25,7 +33,6 @@ url_Get_Instance = "http://localhost:8080/API/ADSModule/GetInstance"
 ark_instance_id = "2033ec8f-244f-4af2-a568-4fb362448491"
 terraria_instance_id = "d5275053-eafc-493e-bbba-a5658231b7fe"
 
-
 global token
 token = None
 
@@ -33,7 +40,6 @@ token = None
 @bot.event
 async def on_ready():
     print(f'{bot.user} has connected to Discord!')
-
 
     login_data = {
         "username": tokens.username,
@@ -45,7 +51,6 @@ async def on_ready():
     async with aiohttp.ClientSession() as session:
         headers = {'Accept': 'application/json'}
         async with session.post(url_login, json=login_data, headers=headers) as resp:
-
 
             if resp.headers['Content-Type'] == 'application/json':
                 loginResult = await resp.json()
@@ -267,7 +272,6 @@ async def terraria_restart(ctx):
 async def help(ctx):
     embed = discord.Embed(title="Bot Commands", description="These are the available commands",
                           color=discord.Color.blue())
-
 
     for command in bot.commands:
         embed.add_field(name=command.name, value=command.help, inline=False)
