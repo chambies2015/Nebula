@@ -43,6 +43,8 @@ async def on_ready():
                 if "success" in loginResult.keys() and loginResult["success"]:
                     print("Login successful")
                     API.sessionId = loginResult["sessionID"]
+                    global token
+                    token = loginResult['sessionID']
 
                     await API.Core_SendConsoleMessageAsync("say Hello Everyone, this message was sent from the Python API!")
                     currentStatus = await API.Core_GetStatusAsync()
@@ -75,7 +77,7 @@ async def ark_start(ctx):
     # specify your data here
     data = {
         "InstanceName": "ARKSurvivalEvolved",
-        "token": API.sessionId  # include the token in your requests
+        "token": token  # include the token in your requests
     }
     headers = {'Content-type': 'application/json', 'Accept': 'text/javascript'}
 
