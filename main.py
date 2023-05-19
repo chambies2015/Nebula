@@ -1,3 +1,6 @@
+import asyncio
+import time
+
 import discord
 from discord.ext import commands
 import requests
@@ -129,7 +132,8 @@ async def ark_start(ctx):
         response = requests.post(url_start, data=json.dumps(data), headers=headers)
 
         if response.status_code == 200:
-            await ctx.send('Successfully started the Ark server!')
+            await asyncio.sleep(20)
+            await ctx.send('Successfully started the Ark server! This will take some time, ~5-10 minutes.')
         else:
             await ctx.send(f'Failed to start the server. HTTP status code: {response.status_code}')
 
@@ -167,7 +171,7 @@ async def ark_restart(ctx):
         response = requests.post(url_restart, data=json.dumps(data), headers=headers)
 
         if response.status_code == 200:
-            await ctx.send('Successfully restarted the server!')
+            await ctx.send('Successfully restarted the server! This will take awhile and may fail...')
         else:
             await ctx.send(f'Failed to stop the server. HTTP status code: {response.status_code}')
 
@@ -238,6 +242,7 @@ async def terraria_start(ctx):
         response = requests.post(url_start, data=json.dumps(data), headers=headers)
 
         if response.status_code == 200:
+            await asyncio.sleep(20)
             await ctx.send('Successfully started the terraria server!')
         else:
             await ctx.send(f'Failed to start the server. HTTP status code: {response.status_code}')
