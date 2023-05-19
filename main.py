@@ -15,6 +15,7 @@ bot = commands.Bot(command_prefix='!', intents=intents)
 
 # specify the URL endpoint for your game server
 API = AMPAPI("http://localhost:8080/")
+url_core_start = "http://localhost:8080/API/Core/Start"
 url_login = "http://localhost:8080/API/Core/Login"
 url_start = "http://localhost:8080/API/ADS01/StartInstance"
 url_stop = "http://localhost:8080/API/ADS01/StopInstance"
@@ -50,6 +51,14 @@ async def on_ready():
                     global token
                     token = loginResult['sessionID']
 
+                    # Start module
+                    empty_data = {}  # an empty dictionary
+                    async with session.post(url_core_start, json=empty_data, headers=headers) as resp_core_start:
+                        if resp_core_start.status == 200:
+                            print("Module started successfully")
+                        else:
+                            print("Failed to start module. HTTP status code:", resp_core_start.status)
+
                     await API.Core_SendConsoleMessageAsync("say Hello Everyone, this message was sent from the Python API!")
                     currentStatus = await API.Core_GetStatusAsync()
                     CPUUsagePercent = currentStatus["Metrics"]["CPU Usage"]["Percent"]
@@ -62,6 +71,8 @@ async def on_ready():
             else:
                 print(f"Unexpected content type: {resp.headers['Content-Type']}")
                 print(await resp.text())
+
+
 
 
 
@@ -163,7 +174,7 @@ async def terraria_stop(ctx):
         await ctx.send(f'Failed to stop the server. HTTP status code: {response.status_code}')
 
 @terraria.command(name='restart')
-async def terraria_stop(ctx):
+async def terraria_restart(ctx):
     # specify your params here
     data = {
         "InstanceName": "tModLoader1401",
