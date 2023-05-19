@@ -10,14 +10,14 @@ import aiohttp
 bot_token = tokens.bot_token
 
 # Initialize the bot
-intents = discord.Intents.default()
+intents = discord.Intents.all()
 bot = commands.Bot(command_prefix='!', intents=intents)
 
 # specify the URL endpoint for your game server
 API = AMPAPI("http://localhost:8080/")
 url_login = "http://localhost:8080/API/Core/Login"
-url_start = "https://localhost:8080/API/ADS01/StartInstance"
-url_stop = "https://localhost:8080/API/ADS01/StopInstance"
+url_start = "http://localhost:8080/API/ADS01/StartInstance"
+url_stop = "http://localhost:8080/API/ADS01/StopInstance"
 
 # global variable to store the token
 global token
@@ -36,7 +36,10 @@ async def on_ready():
     }
 
     async with aiohttp.ClientSession() as session:
-        async with session.post(url_login, json=login_data) as resp:
+        headers = {'Accept': 'application/json'}
+        async with session.post(url_login, json=login_data, headers=headers) as resp:
+            # rest of your code
+
             if resp.headers['Content-Type'] == 'application/json':
                 loginResult = await resp.json()
 
@@ -76,8 +79,8 @@ async def ark(ctx):
 async def ark_start(ctx):
     # specify your data here
     data = {
-        "InstanceName": "ARKSurvivalEvolved",
-        "token": token  # include the token in your requests
+        "InstanceName": "ARKSurvivalEvolved01",
+        "SESSIONID": token  # include the token in your requests
     }
     headers = {'Content-type': 'application/json', 'Accept': 'text/javascript'}
 
