@@ -19,6 +19,7 @@ url_login = "http://localhost:8080/API/Core/Login"
 url_start = "http://localhost:8080/API/ADSModule/StartInstance"
 url_stop = "http://localhost:8080/API/ADSModule/StopInstance"
 url_restart = "http://localhost:8080/API/ADSModule/RestartInstance"
+url_Network_Info = "http://localhost:8080/API/ADSModule/GetInstanceNetworkInfo"
 
 # global variable to store the token
 global token
@@ -68,7 +69,25 @@ async def on_ready():
 @bot.group()
 async def ark(ctx):
     if ctx.invoked_subcommand is None:
-        await ctx.send('Invalid Ark command passed...')
+        await ctx.send('Available Commands:\n- Info\n- Start\n- Stop\n- Restart')
+
+@ark.command(name='info')
+async def ark_info(ctx):
+
+    # specify your data here
+    data = {
+        "InstanceName": "ARKSurvivalEvolved01",
+        "SESSIONID": token  # include the token in your requests
+    }
+    headers = {'Content-type': 'application/json', 'Accept': 'text/javascript'}
+
+    response = requests.post(url_Network_Info, data=json.dumps(data), headers=headers)
+
+    if response.status_code == 200:
+        await ctx.send('Successfully started the Ark server!')
+    else:
+        await ctx.send(f'Failed to start the server. HTTP status code: {response.status_code}')
+
 
 @ark.command(name='start')
 async def ark_start(ctx):
