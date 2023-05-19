@@ -64,12 +64,6 @@ async def on_ready():
                 print(await resp.text())
 
 
-    # response = requests.post(url_login, data=json.dumps(login_data), headers=headers, verify=True)
-    # response_data = response.json()
-    #
-    # # assuming the response is a JSON object that includes a 'token' key
-    # global token
-    # token = response_data['token']
 
 @bot.group()
 async def ark(ctx):
@@ -78,6 +72,7 @@ async def ark(ctx):
 
 @ark.command(name='start')
 async def ark_start(ctx):
+
     # specify your data here
     data = {
         "InstanceName": "ARKSurvivalEvolved01",
@@ -111,7 +106,7 @@ async def ark_stop(ctx):
         await ctx.send(f'Failed to stop the server. HTTP status code: {response.status_code}')
 
 @ark.command(name='restart')
-async def ark_stop(ctx):
+async def ark_restart(ctx):
     # specify your params here
     data = {
         "InstanceName": "ARKSurvivalEvolved01",
