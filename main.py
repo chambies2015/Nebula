@@ -11,7 +11,8 @@ bot_token = tokens.bot_token
 
 # Initialize the bot
 intents = discord.Intents.all()
-bot = commands.Bot(command_prefix='!', intents=intents)
+bot = commands.Bot(command_prefix='$', intents=intents)
+bot.remove_command('help')
 
 # specify the URL endpoint for your game server
 API = AMPAPI("http://localhost:8080/")
@@ -24,10 +25,12 @@ url_Instances_Status = "http://localhost:8080/API/ADSModule/GetInstanceStatuses"
 url_Get_Instance = "http://localhost:8080/API/ADSModule/GetInstance"
 
 ark_instance_id = "2033ec8f-244f-4af2-a568-4fb362448491"
+terraria_instance_id = "d5275053-eafc-493e-bbba-a5658231b7fe"
 
 # global variable to store the token
 global token
 token = None
+
 
 @bot.event
 async def on_ready():
@@ -54,8 +57,6 @@ async def on_ready():
                     API.sessionId = loginResult["sessionID"]
                     global token
                     token = loginResult['sessionID']
-
-                    await API.Core_SendConsoleMessageAsync("say Hello Everyone, this message was sent from the Python API!")
                     currentStatus = await API.Core_GetStatusAsync()
                     CPUUsagePercent = currentStatus["Metrics"]["CPU Usage"]["Percent"]
                     print(f"Current CPU usage is: {CPUUsagePercent}%")
@@ -69,149 +70,212 @@ async def on_ready():
                 print(await resp.text())
 
 
-
-@bot.group()
+@bot.group(help="ARK commands to start, stop, restart, and get info on the server")
 async def ark(ctx):
-    if ctx.invoked_subcommand is None:
-        await ctx.send('Available Commands:\n- Info\n- Start\n- Stop\n- Restart')
+    async with ctx.typing():
+        if ctx.invoked_subcommand is None:
+            await ctx.send('Available Commands:\n- Info\n- Start\n- Stop\n- Restart')
 
 
 @ark.command(name='info')
 async def ark_info(ctx):
-    data = {
-        "InstanceId": ark_instance_id,
-        "SESSIONID": token  # include the token in your requests
-    }
-    headers = {'Content-type': 'application/json', 'Accept': 'text/javascript'}
-    response = requests.post(url_Get_Instance, data=json.dumps(data), headers=headers)
+    async with ctx.typing():
+        data = {
+            "InstanceId": ark_instance_id,
+            "SESSIONID": token  # include the token in your requests
+        }
+        headers = {'Content-type': 'application/json', 'Accept': 'text/javascript'}
+        response = requests.post(url_Get_Instance, data=json.dumps(data), headers=headers)
 
-    if response.status_code == 200:
-        response_content = response.content.decode()
-        json_response = json.loads(response_content)
-        running_status = json_response["Running"]
+        if response.status_code == 200:
+            response_content = response.content.decode()
+            json_response = json.loads(response_content)
+            running_status = json_response["Running"]
 
-        embed = discord.Embed(title='ARK Survival Evolved Server Details', color=discord.Color.blue())
-        embed.add_field(name='Server IP', value='67.4.158.45', inline=False)
-        embed.add_field(name='Server Port', value='7777', inline=False)
-        embed.add_field(name='Server Name', value='Chambies Private Server', inline=False)
-        embed.add_field(name='Server Password', value='thebois', inline=False)
-        embed.add_field(name='Server Status',
-                        value=f'The Ark server is currently {"running" if running_status else "not running"}.',
-                        inline=False)
+            embed = discord.Embed(title='ARK Survival Evolved Server Details', color=discord.Color.blue())
+            embed.add_field(name='Server IP', value='67.4.158.45', inline=False)
+            embed.add_field(name='Server Port', value='7777', inline=False)
+            embed.add_field(name='Server Name', value='Chambies Private Server', inline=False)
+            embed.add_field(name='Server Password', value='thebois', inline=False)
+            embed.add_field(name='Server Status',
+                            value=f'The Ark server is currently {"running" if running_status else "not running"}.',
+                            inline=False)
 
-        await ctx.send(embed=embed)
-    else:
-        await ctx.send(f'Failed to get server info. HTTP status code: {response.status_code}')
+            await ctx.send(embed=embed)
+        else:
+            await ctx.send(f'Failed to get server info. HTTP status code: {response.status_code}')
 
 
 @ark.command(name='start')
 async def ark_start(ctx):
+    async with ctx.typing():
+        # specify your data here
+        data = {
+            "InstanceName": "ARKSurvivalEvolved01",
+            "SESSIONID": token  # include the token in your requests
+        }
+        headers = {'Content-type': 'application/json', 'Accept': 'text/javascript'}
 
-    # specify your data here
-    data = {
-        "InstanceName": "ARKSurvivalEvolved01",
-        "SESSIONID": token  # include the token in your requests
-    }
-    headers = {'Content-type': 'application/json', 'Accept': 'text/javascript'}
+        response = requests.post(url_start, data=json.dumps(data), headers=headers)
 
-    response = requests.post(url_start, data=json.dumps(data), headers=headers)
-
-    if response.status_code == 200:
-        await ctx.send('Successfully started the Ark server!')
-    else:
-        await ctx.send(f'Failed to start the server. HTTP status code: {response.status_code}')
+        if response.status_code == 200:
+            await ctx.send('Successfully started the Ark server!')
+        else:
+            await ctx.send(f'Failed to start the server. HTTP status code: {response.status_code}')
 
 
 @ark.command(name='stop')
 async def ark_stop(ctx):
-    # specify your params here
-    data = {
-        "InstanceName": "ARKSurvivalEvolved01",
-        "SESSIONID": token  # include the token in your requests
-    }
+    async with ctx.typing():
+        # specify your params here
+        data = {
+            "InstanceName": "ARKSurvivalEvolved01",
+            "SESSIONID": token  # include the token in your requests
+        }
 
-    headers = {'Content-type': 'application/json', 'Accept': 'text/javascript'}
+        headers = {'Content-type': 'application/json', 'Accept': 'text/javascript'}
 
-    response = requests.post(url_stop, data=json.dumps(data), headers=headers)
+        response = requests.post(url_stop, data=json.dumps(data), headers=headers)
 
-    if response.status_code == 200:
-        await ctx.send('Successfully stopped the server!')
-    else:
-        await ctx.send(f'Failed to stop the server. HTTP status code: {response.status_code}')
+        if response.status_code == 200:
+            await ctx.send('Successfully stopped the server!')
+        else:
+            await ctx.send(f'Failed to stop the server. HTTP status code: {response.status_code}')
+
 
 @ark.command(name='restart')
 async def ark_restart(ctx):
-    # specify your params here
-    data = {
-        "InstanceName": "ARKSurvivalEvolved01",
-        "SESSIONID": token  # include the token in your requests
-    }
+    async with ctx.typing():
+        # specify your params here
+        data = {
+            "InstanceName": "ARKSurvivalEvolved01",
+            "SESSIONID": token  # include the token in your requests
+        }
 
-    headers = {'Content-type': 'application/json', 'Accept': 'text/javascript'}
+        headers = {'Content-type': 'application/json', 'Accept': 'text/javascript'}
 
-    response = requests.post(url_restart, data=json.dumps(data), headers=headers)
+        response = requests.post(url_restart, data=json.dumps(data), headers=headers)
 
-    if response.status_code == 200:
-        await ctx.send('Successfully restarted the server!')
-    else:
-        await ctx.send(f'Failed to stop the server. HTTP status code: {response.status_code}')
+        if response.status_code == 200:
+            await ctx.send('Successfully restarted the server!')
+        else:
+            await ctx.send(f'Failed to stop the server. HTTP status code: {response.status_code}')
 
 
-@bot.group()
+@bot.group(help="Terraria commands to start, stop, restart, and get info on the server")
 async def terraria(ctx):
-    if ctx.invoked_subcommand is None:
-        await ctx.send('Invalid terraria command passed...')
+    async with ctx.typing():
+        if ctx.invoked_subcommand is None:
+            await ctx.send('Available Commands:\n- Info\n- Start\n- Stop\n- Restart')
+
+
+@terraria.command(name='info')
+async def terraria_info(ctx):
+    async with ctx.typing():
+        data = {
+            "InstanceId": terraria_instance_id,
+            "SESSIONID": token  # include the token in your requests
+        }
+        headers = {'Content-type': 'application/json', 'Accept': 'text/javascript'}
+        response = requests.post(url_Get_Instance, data=json.dumps(data), headers=headers)
+
+        if response.status_code == 200:
+            response_content = response.content.decode()
+            json_response = json.loads(response_content)
+            running_status = json_response["Running"]
+
+            embed = discord.Embed(title='Terraria Server Details', color=discord.Color.blue())
+            embed.add_field(name='Server IP', value='67.4.158.45', inline=False)
+            embed.add_field(name='Server Port', value='7779', inline=False)
+            embed.add_field(name='Server Password', value='thebois', inline=False)
+            embed.add_field(name='Mod List', value="""
+            Boss Checklist v1.4.0
+            Calamity Mod v2.0.2.3
+            Calamity Mod Music v2.0.2.2
+            Calamity's Vanities v10.2
+            Quality of Life 更好的体验 v1.6.3.3
+            Magic Storage v0.5.7.10
+            Max Stack Plus Extra v1.4.0.2
+            Ore Excavator v0.8.4
+            Recipe Browser v0.9.8
+            """, inline=False)
+            embed.add_field(name='Server Status',
+                            value=f'The Terraria server is currently {"running" if running_status else "not running"}.',
+                            inline=False)
+
+            await ctx.send(embed=embed)
+
+        else:
+            await ctx.send(f'Failed to get server info. HTTP status code: {response.status_code}')
+
 
 @terraria.command(name='start')
 async def terraria_start(ctx):
-    # specify your data here
-    data = {
-        "InstanceName": "tModLoader1401",
-        "SESSIONID": token  # include the token in your requests
-    }
-    headers = {'Content-type': 'application/json', 'Accept': 'text/javascript'}
+    async with ctx.typing():
+        # specify your data here
+        data = {
+            "InstanceName": "tModLoader1401",
+            "SESSIONID": token  # include the token in your requests
+        }
+        headers = {'Content-type': 'application/json', 'Accept': 'text/javascript'}
 
-    response = requests.post(url_start, data=json.dumps(data), headers=headers)
+        response = requests.post(url_start, data=json.dumps(data), headers=headers)
 
-    if response.status_code == 200:
-        await ctx.send('Successfully started the terraria server!')
-    else:
-        await ctx.send(f'Failed to start the server. HTTP status code: {response.status_code}')
+        if response.status_code == 200:
+            await ctx.send('Successfully started the terraria server!')
+        else:
+            await ctx.send(f'Failed to start the server. HTTP status code: {response.status_code}')
 
 
 @terraria.command(name='stop')
 async def terraria_stop(ctx):
-    # specify your params here
-    data = {
-        "InstanceName": "tModLoader1401",
-        "SESSIONID": token  # include the token in your requests
-    }
+    async with ctx.typing():
+        # specify your params here
+        data = {
+            "InstanceName": "tModLoader1401",
+            "SESSIONID": token  # include the token in your requests
+        }
 
-    headers = {'Content-type': 'application/json', 'Accept': 'text/javascript'}
+        headers = {'Content-type': 'application/json', 'Accept': 'text/javascript'}
 
-    response = requests.post(url_stop, data=json.dumps(data), headers=headers)
+        response = requests.post(url_stop, data=json.dumps(data), headers=headers)
 
-    if response.status_code == 200:
-        await ctx.send('Successfully stopped the terraria server!')
-    else:
-        await ctx.send(f'Failed to stop the server. HTTP status code: {response.status_code}')
+        if response.status_code == 200:
+            await ctx.send('Successfully stopped the terraria server!')
+        else:
+            await ctx.send(f'Failed to stop the server. HTTP status code: {response.status_code}')
+
 
 @terraria.command(name='restart')
 async def terraria_restart(ctx):
-    # specify your params here
-    data = {
-        "InstanceName": "tModLoader1401",
-        "SESSIONID": token  # include the token in your requests
-    }
+    async with ctx.typing():
+        # specify your params here
+        data = {
+            "InstanceName": "tModLoader1401",
+            "SESSIONID": token  # include the token in your requests
+        }
 
-    headers = {'Content-type': 'application/json', 'Accept': 'text/javascript'}
+        headers = {'Content-type': 'application/json', 'Accept': 'text/javascript'}
 
-    response = requests.post(url_restart, data=json.dumps(data), headers=headers)
+        response = requests.post(url_restart, data=json.dumps(data), headers=headers)
 
-    if response.status_code == 200:
-        await ctx.send('Successfully restarted the terraria server!')
-    else:
-        await ctx.send(f'Failed to stop the server. HTTP status code: {response.status_code}')
+        if response.status_code == 200:
+            await ctx.send('Successfully restarted the terraria server!')
+        else:
+            await ctx.send(f'Failed to stop the server. HTTP status code: {response.status_code}')
+
+
+@bot.command()
+async def help(ctx):
+    embed = discord.Embed(title="Bot Commands", description="These are the available commands",
+                          color=discord.Color.blue())
+
+    # Getting all bot commands
+    for command in bot.commands:
+        embed.add_field(name=command.name, value=command.help, inline=False)
+
+    await ctx.send(embed=embed)
+
 
 # Run the bot
 bot.run(bot_token)
