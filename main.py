@@ -76,7 +76,7 @@ async def on_ready():
 @bot.group(help="ARK commands to start, stop, restart, and get info on the server")
 async def ark(ctx):
     async with ctx.typing():
-        embed = discord.Embed(title="Bot Commands", description="These are the available commands",
+        embed = discord.Embed(title="Ark Bot Commands", description="These are the available commands",
                               color=discord.Color.blue())
 
         for command in ark.commands:
@@ -174,7 +174,7 @@ async def ark_restart(ctx):
 @bot.group(help="Terraria commands to start, stop, restart, and get info on the server")
 async def terraria(ctx):
     async with ctx.typing():
-        embed = discord.Embed(title="Bot Commands", description="These are the available commands",
+        embed = discord.Embed(title="Terraria Bot Commands", description="These are the available commands",
                               color=discord.Color.blue())
 
         for command in terraria.commands:
