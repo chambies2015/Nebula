@@ -21,6 +21,7 @@ url_stop = "http://localhost:8080/API/ADSModule/StopInstance"
 url_restart = "http://localhost:8080/API/ADSModule/RestartInstance"
 url_Network_Info = "http://localhost:8080/API/ADSModule/GetInstanceNetworkInfo"
 url_Instances_Status = "http://localhost:8080/API/ADSModule/GetInstanceStatuses"
+url_Get_Instance = "http://localhost:8080/API/ADSModule/GetInstance"
 
 # global variable to store the token
 global token
@@ -90,6 +91,13 @@ async def ark_info(ctx):
         await ctx.send(f'Failed to start the server. HTTP status code: {response.status_code}')
 
     response = requests.post(url_Instances_Status, data=json.dumps(data), headers=headers)
+
+    if response.status_code == 200:
+        await ctx.send('Successfully started the Ark server!')
+    else:
+        await ctx.send(f'Failed to start the server. HTTP status code: {response.status_code}')
+
+    response = requests.post(url_Get_Instance, data=json.dumps(data), headers=headers)
 
     if response.status_code == 200:
         await ctx.send('Successfully started the Ark server!')
