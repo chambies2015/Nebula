@@ -76,11 +76,16 @@ async def on_ready():
 @bot.group(help="ARK commands to start, stop, restart, and get info on the server")
 async def ark(ctx):
     async with ctx.typing():
-        if ctx.invoked_subcommand is None:
-            await ctx.send('Available Commands:\n- Info\n- Start\n- Stop\n- Restart')
+        embed = discord.Embed(title="Bot Commands", description="These are the available commands",
+                              color=discord.Color.blue())
+
+        for command in ark.commands:
+            embed.add_field(name=command.name, value=command.help, inline=False)
+
+        await ctx.send(embed=embed)
 
 
-@ark.command(name='info')
+@ark.command(name='info', help="Displays the server info for Ark Survival Evolved game server.")
 async def ark_info(ctx):
     async with ctx.typing():
         data = {
@@ -109,7 +114,8 @@ async def ark_info(ctx):
             await ctx.send(f'Failed to get server info. HTTP status code: {response.status_code}')
 
 
-@ark.command(name='start')
+@ark.command(name='start', help="Starts the spooling up process for Ark Survival Evolved. Takes awhile due to large "
+                                "game.")
 async def ark_start(ctx):
     async with ctx.typing():
 
@@ -127,7 +133,7 @@ async def ark_start(ctx):
             await ctx.send(f'Failed to start the server. HTTP status code: {response.status_code}')
 
 
-@ark.command(name='stop')
+@ark.command(name='stop', help="Sends a stop signal to the Ark Survival Evolved game server.")
 async def ark_stop(ctx):
     async with ctx.typing():
 
@@ -146,7 +152,7 @@ async def ark_stop(ctx):
             await ctx.send(f'Failed to stop the server. HTTP status code: {response.status_code}')
 
 
-@ark.command(name='restart')
+@ark.command(name='restart', help="Sends a restart signal to the Ark Survival Evolved game server, may take awhile.")
 async def ark_restart(ctx):
     async with ctx.typing():
 
@@ -168,11 +174,16 @@ async def ark_restart(ctx):
 @bot.group(help="Terraria commands to start, stop, restart, and get info on the server")
 async def terraria(ctx):
     async with ctx.typing():
-        if ctx.invoked_subcommand is None:
-            await ctx.send('Available Commands:\n- Info\n- Start\n- Stop\n- Restart')
+        embed = discord.Embed(title="Bot Commands", description="These are the available commands",
+                              color=discord.Color.blue())
+
+        for command in terraria.commands:
+            embed.add_field(name=command.name, value=command.help, inline=False)
+
+        await ctx.send(embed=embed)
 
 
-@terraria.command(name='info')
+@terraria.command(name='info', help="Displays the server info for the Terraria game server.")
 async def terraria_info(ctx):
     async with ctx.typing():
         data = {
@@ -212,7 +223,7 @@ async def terraria_info(ctx):
             await ctx.send(f'Failed to get server info. HTTP status code: {response.status_code}')
 
 
-@terraria.command(name='start')
+@terraria.command(name='start', help="Starts up the Terraria game server relatively quick.")
 async def terraria_start(ctx):
     async with ctx.typing():
 
@@ -230,7 +241,7 @@ async def terraria_start(ctx):
             await ctx.send(f'Failed to start the server. HTTP status code: {response.status_code}')
 
 
-@terraria.command(name='stop')
+@terraria.command(name='stop', help="Sends a stop signal to the Terraria game server.")
 async def terraria_stop(ctx):
     async with ctx.typing():
 
@@ -249,7 +260,7 @@ async def terraria_stop(ctx):
             await ctx.send(f'Failed to stop the server. HTTP status code: {response.status_code}')
 
 
-@terraria.command(name='restart')
+@terraria.command(name='restart', help="Sends a restart signal to the Terraria game server.")
 async def terraria_restart(ctx):
     async with ctx.typing():
 
@@ -268,7 +279,7 @@ async def terraria_restart(ctx):
             await ctx.send(f'Failed to stop the server. HTTP status code: {response.status_code}')
 
 
-@bot.command()
+@bot.command(help="displays helpful commands.")
 async def help(ctx):
     embed = discord.Embed(title="Bot Commands", description="These are the available commands",
                           color=discord.Color.blue())
