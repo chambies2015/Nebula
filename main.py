@@ -95,15 +95,14 @@ async def ark_start(ctx):
 @ark.command(name='stop')
 async def ark_stop(ctx):
     # specify your params here
-    params = {
-        "key1": "value1",
-        "key2": "value2",
-        "token": token  # include the token in your requests
+    data = {
+        "InstanceName": "ARKSurvivalEvolved01",
+        "SESSIONID": token  # include the token in your requests
     }
 
-    headers = {'Accept': 'text/javascript'}
+    headers = {'Content-type': 'application/json', 'Accept': 'text/javascript'}
 
-    response = requests.get(url_stop, params=params, headers=headers)
+    response = requests.post(url_stop, data=json.dumps(data), headers=headers)
 
     if response.status_code == 200:
         await ctx.send('Successfully stopped the server!')
