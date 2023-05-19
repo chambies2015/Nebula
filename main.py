@@ -74,9 +74,8 @@ async def ark(ctx):
 async def ark_start(ctx):
     # specify your data here
     data = {
-        "key1": "value1",
-        "key2": "value2",
-        "token": token  # include the token in your requests
+        "InstanceName": "ARKSurvivalEvolved",
+        "token": API.sessionId  # include the token in your requests
     }
     headers = {'Content-type': 'application/json', 'Accept': 'text/javascript'}
 
