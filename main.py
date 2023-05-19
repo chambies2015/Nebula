@@ -88,7 +88,7 @@ async def ark_start(ctx):
     response = requests.post(url_start, data=json.dumps(data), headers=headers)
 
     if response.status_code == 200:
-        await ctx.send('Successfully started the server!')
+        await ctx.send('Successfully started the Ark server!')
     else:
         await ctx.send(f'Failed to start the server. HTTP status code: {response.status_code}')
 
@@ -126,5 +126,63 @@ async def ark_stop(ctx):
         await ctx.send('Successfully restarted the server!')
     else:
         await ctx.send(f'Failed to stop the server. HTTP status code: {response.status_code}')
+
+
+@bot.group()
+async def terraria(ctx):
+    if ctx.invoked_subcommand is None:
+        await ctx.send('Invalid terraria command passed...')
+
+@terraria.command(name='start')
+async def terraria_start(ctx):
+    # specify your data here
+    data = {
+        "InstanceName": "tModLoader1401",
+        "SESSIONID": token  # include the token in your requests
+    }
+    headers = {'Content-type': 'application/json', 'Accept': 'text/javascript'}
+
+    response = requests.post(url_start, data=json.dumps(data), headers=headers)
+
+    if response.status_code == 200:
+        await ctx.send('Successfully started the terraria server!')
+    else:
+        await ctx.send(f'Failed to start the server. HTTP status code: {response.status_code}')
+
+
+@terraria.command(name='stop')
+async def terraria_stop(ctx):
+    # specify your params here
+    data = {
+        "InstanceName": "tModLoader1401",
+        "SESSIONID": token  # include the token in your requests
+    }
+
+    headers = {'Content-type': 'application/json', 'Accept': 'text/javascript'}
+
+    response = requests.post(url_stop, data=json.dumps(data), headers=headers)
+
+    if response.status_code == 200:
+        await ctx.send('Successfully stopped the terraria server!')
+    else:
+        await ctx.send(f'Failed to stop the server. HTTP status code: {response.status_code}')
+
+@terraria.command(name='restart')
+async def terraria_stop(ctx):
+    # specify your params here
+    data = {
+        "InstanceName": "tModLoader1401",
+        "SESSIONID": token  # include the token in your requests
+    }
+
+    headers = {'Content-type': 'application/json', 'Accept': 'text/javascript'}
+
+    response = requests.post(url_restart, data=json.dumps(data), headers=headers)
+
+    if response.status_code == 200:
+        await ctx.send('Successfully restarted the terraria server!')
+    else:
+        await ctx.send(f'Failed to stop the server. HTTP status code: {response.status_code}')
+
 # Run the bot
 bot.run(bot_token)
