@@ -75,14 +75,15 @@ async def on_ready():
 
 @bot.group(help="ARK commands to start, stop, restart, and get info on the server")
 async def ark(ctx):
-    async with ctx.typing():
-        embed = discord.Embed(title="Ark Bot Commands", description="These are the available commands",
-                              color=discord.Color.blue())
+    if ctx.invoked_subcommand is None:
+        async with ctx.typing():
+            embed = discord.Embed(title="Ark Bot Commands", description="These are the available commands",
+                                  color=discord.Color.blue())
 
-        for command in ark.commands:
-            embed.add_field(name=command.name, value=command.help, inline=False)
+            for command in ark.commands:
+                embed.add_field(name=command.name, value=command.help, inline=False)
 
-        await ctx.send(embed=embed)
+            await ctx.send(embed=embed)
 
 
 @ark.command(name='info', help="Displays the server info for Ark Survival Evolved game server.")
@@ -173,14 +174,15 @@ async def ark_restart(ctx):
 
 @bot.group(help="Terraria commands to start, stop, restart, and get info on the server")
 async def terraria(ctx):
-    async with ctx.typing():
-        embed = discord.Embed(title="Terraria Bot Commands", description="These are the available commands",
-                              color=discord.Color.blue())
+    if ctx.invoked_subcommand is None:
+        async with ctx.typing():
+            embed = discord.Embed(title="Terraria Bot Commands", description="These are the available commands",
+                                  color=discord.Color.blue())
 
-        for command in terraria.commands:
-            embed.add_field(name=command.name, value=command.help, inline=False)
+            for command in terraria.commands:
+                embed.add_field(name=command.name, value=command.help, inline=False)
 
-        await ctx.send(embed=embed)
+            await ctx.send(embed=embed)
 
 
 @terraria.command(name='info', help="Displays the server info for the Terraria game server.")
