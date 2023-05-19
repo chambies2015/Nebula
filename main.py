@@ -23,6 +23,8 @@ url_Network_Info = "http://localhost:8080/API/ADSModule/GetInstanceNetworkInfo"
 url_Instances_Status = "http://localhost:8080/API/ADSModule/GetInstanceStatuses"
 url_Get_Instance = "http://localhost:8080/API/ADSModule/GetInstance"
 
+ark_instance_id = "2033ec8f-244f-4af2-a568-4fb362448491"
+
 # global variable to store the token
 global token
 token = None
@@ -33,8 +35,8 @@ async def on_ready():
 
     # Login on startup
     login_data = {
-        "username": "admin",
-        "password": "CrimsonS0lstice0657^",
+        "username": tokens.username,
+        "password": tokens.password,
         "token": "",
         "rememberMe": "true"
     }
@@ -73,36 +75,33 @@ async def ark(ctx):
     if ctx.invoked_subcommand is None:
         await ctx.send('Available Commands:\n- Info\n- Start\n- Stop\n- Restart')
 
+
 @ark.command(name='info')
 async def ark_info(ctx):
-
-    # specify your data here
     data = {
-        "InstanceName": "ARKSurvivalEvolved01",
+        "InstanceId": ark_instance_id,
         "SESSIONID": token  # include the token in your requests
     }
     headers = {'Content-type': 'application/json', 'Accept': 'text/javascript'}
-
-    response = requests.post(url_Network_Info, data=json.dumps(data), headers=headers)
-
-    if response.status_code == 200:
-        await ctx.send('Successfully started the Ark server!')
-    else:
-        await ctx.send(f'Failed to start the server. HTTP status code: {response.status_code}')
-
-    response = requests.post(url_Instances_Status, data=json.dumps(data), headers=headers)
-
-    if response.status_code == 200:
-        await ctx.send('Successfully started the Ark server!')
-    else:
-        await ctx.send(f'Failed to start the server. HTTP status code: {response.status_code}')
-
     response = requests.post(url_Get_Instance, data=json.dumps(data), headers=headers)
 
     if response.status_code == 200:
-        await ctx.send('Successfully started the Ark server!')
+        response_content = response.content.decode()
+        json_response = json.loads(response_content)
+        running_status = json_response["Running"]
+
+        embed = discord.Embed(title='ARK Survival Evolved Server Details', color=discord.Color.blue())
+        embed.add_field(name='Server IP', value='67.4.158.45', inline=False)
+        embed.add_field(name='Server Port', value='7777', inline=False)
+        embed.add_field(name='Server Name', value='Chambies Private Server', inline=False)
+        embed.add_field(name='Server Password', value='thebois', inline=False)
+        embed.add_field(name='Server Status',
+                        value=f'The Ark server is currently {"running" if running_status else "not running"}.',
+                        inline=False)
+
+        await ctx.send(embed=embed)
     else:
-        await ctx.send(f'Failed to start the server. HTTP status code: {response.status_code}')
+        await ctx.send(f'Failed to get server info. HTTP status code: {response.status_code}')
 
 
 @ark.command(name='start')
