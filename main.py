@@ -18,6 +18,7 @@ API = AMPAPI("http://localhost:8080/")
 url_login = "http://localhost:8080/API/Core/Login"
 url_start = "http://localhost:8080/API/ADS01/StartInstance"
 url_stop = "http://localhost:8080/API/ADS01/StopInstance"
+url_restart = "http://localhost:8080/API/ADS01/RestartInstance"
 
 # global variable to store the token
 global token
@@ -109,6 +110,21 @@ async def ark_stop(ctx):
     else:
         await ctx.send(f'Failed to stop the server. HTTP status code: {response.status_code}')
 
+@ark.command(name='restart')
+async def ark_stop(ctx):
+    # specify your params here
+    data = {
+        "InstanceName": "ARKSurvivalEvolved01",
+        "SESSIONID": token  # include the token in your requests
+    }
 
+    headers = {'Content-type': 'application/json', 'Accept': 'text/javascript'}
+
+    response = requests.post(url_restart, data=json.dumps(data), headers=headers)
+
+    if response.status_code == 200:
+        await ctx.send('Successfully restarted the server!')
+    else:
+        await ctx.send(f'Failed to stop the server. HTTP status code: {response.status_code}')
 # Run the bot
 bot.run(bot_token)
