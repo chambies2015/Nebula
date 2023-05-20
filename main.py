@@ -121,7 +121,6 @@ async def ark_info(ctx):
             await ctx.send(f'Failed to get server info. HTTP status code: {response.status_code}')
 
 
-
 @ark.command(name='start', help="Starts the spooling up process for Ark Survival Evolved. Takes awhile due to large "
                                 "game.")
 async def ark_start(ctx):
