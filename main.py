@@ -136,7 +136,7 @@ async def ark_start(ctx):
 
         if response.status_code == 200:
             await asyncio.sleep(20)
-            await ctx.send('Successfully started the Ark server! This will take some time, ~5-10 minutes.')
+            await ctx.send('Successfully started spooling up the Ark server! This will take some time, ~15-20 minutes.')
         else:
             await ctx.send(f'Failed to start the server. HTTP status code: {response.status_code}')
 
@@ -155,7 +155,7 @@ async def ark_stop(ctx):
         response = requests.post(url_stop, data=json.dumps(data), headers=headers)
 
         if response.status_code == 200:
-            await ctx.send('Successfully stopped the server!')
+            await ctx.send('Successfully sent a stop signal to the server! Give it time to stop completely.')
         else:
             await ctx.send(f'Failed to stop the server. HTTP status code: {response.status_code}')
 
