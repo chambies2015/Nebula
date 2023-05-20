@@ -15,7 +15,7 @@ intents = discord.Intents.all()
 bot = commands.Bot(command_prefix='$', intents=intents)
 bot.remove_command('help')
 
-allowed_channels = ["1014955844913332334", "939660290172268583"]
+allowed_channels = ["1014955844913332334", "939660290172268583", "809544965386272790"]
 
 
 def is_allowed_channel(ctx):
@@ -102,7 +102,10 @@ async def ark_info(ctx):
         if response.status_code == 200:
             response_content = response.content.decode()
             json_response = json.loads(response_content)
-            running_status = json_response["Running"]
+            running_status = json_response.get("Running")
+
+            # alternative check for 'Running'
+            # running_status = json_response["Running"] if "Running" in json_response else None
 
             embed = discord.Embed(title='ARK Survival Evolved Server Details', color=discord.Color.blue())
             embed.add_field(name='Server IP', value='67.4.158.45', inline=False)
@@ -116,6 +119,7 @@ async def ark_info(ctx):
             await ctx.send(embed=embed)
         else:
             await ctx.send(f'Failed to get server info. HTTP status code: {response.status_code}')
+
 
 
 @ark.command(name='start', help="Starts the spooling up process for Ark Survival Evolved. Takes awhile due to large "
