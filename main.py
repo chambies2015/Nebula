@@ -113,7 +113,7 @@ async def ark_info(ctx):
             embed.add_field(name='Server Name', value='Chambies Private Server', inline=False)
             embed.add_field(name='Server Password', value='thebois', inline=False)
             embed.add_field(name='Server Status',
-                            value=f'The Ark server is currently {"running" if running_status else "not running"}.',
+                            value=f'The Ark server is currently {"running" if running_status else "not running or unable to get status"}.',
                             inline=False)
 
             await ctx.send(embed=embed)
@@ -205,7 +205,10 @@ async def terraria_info(ctx):
         if response.status_code == 200:
             response_content = response.content.decode()
             json_response = json.loads(response_content)
-            running_status = json_response["Running"]
+            running_status = json_response.get("Running")  # use dict's get() method to avoid KeyError
+
+            # alternative check for 'Running'
+            # running_status = json_response["Running"] if "Running" in json_response else None
 
             embed = discord.Embed(title='Terraria Server Details', color=discord.Color.blue())
             embed.add_field(name='Server IP', value='67.4.158.45', inline=False)
@@ -223,7 +226,7 @@ async def terraria_info(ctx):
             Recipe Browser v0.9.8
             """, inline=False)
             embed.add_field(name='Server Status',
-                            value=f'The Terraria server is currently {"running" if running_status else "not running"}.',
+                            value=f'The Terraria server is currently {"running" if running_status else "not running or unable to get status"}.',
                             inline=False)
 
             await ctx.send(embed=embed)
