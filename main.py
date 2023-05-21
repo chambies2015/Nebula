@@ -33,6 +33,8 @@ url_Get_Instance = "http://localhost:8080/API/ADSModule/GetInstance"
 
 ark_instance_id = "2033ec8f-244f-4af2-a568-4fb362448491"
 terraria_instance_id = "d5275053-eafc-493e-bbba-a5658231b7fe"
+necesse_instance_id = "592aa884-68c2-47ff-aaeb-cab0be49b395"
+icarus_instance_id = "25bb4b25-053e-4992-b69f-3ac20ab5b105"
 
 global token
 token = None
@@ -105,6 +107,17 @@ async def login():
             else:
                 print(f"Unexpected content type: {resp.headers['Content-Type']}")
                 print(await resp.text())
+
+
+# use this command to get all instance id's
+# @bot.command(name="getinstances")
+# async def get_instances(ctx):
+#     headers = {'Content-type': 'application/json', 'Accept': 'text/javascript'}
+#     data = {
+#         "SESSIONID": token
+#     }
+#     response = requests.post(url_Instances_Status, data=json.dumps(data), headers=headers)
+#     test = 'test'
 
 
 @bot.group(help="ARK commands to start, stop, restart, and get info on the server")
@@ -329,6 +342,219 @@ async def terraria_restart(ctx):
 
         if response.status_code == 200:
             await ctx.send('Successfully restarted the terraria server!')
+        else:
+            await ctx.send(f'Failed to stop the server. HTTP status code: {response.status_code}')
+
+
+@bot.group(help="Necesse commands to start, stop, restart, and get info on the server")
+async def necesse(ctx):
+    if ctx.invoked_subcommand is None:
+        async with ctx.typing():
+            await login()
+            embed = discord.Embed(title="Necesse Bot Commands", description="These are the available commands",
+                                  color=discord.Color.blue())
+
+            for command in necesse.commands:
+                embed.add_field(name=command.name, value=command.help, inline=False)
+
+            await ctx.send(embed=embed)
+
+
+@necesse.command(name='info', help="Displays the server info for the Necesse game server.")
+async def necesse_info(ctx):
+    async with ctx.typing():
+        await login()
+        data = {
+            "InstanceId": necesse_instance_id,
+            "SESSIONID": token
+        }
+        headers = {'Content-type': 'application/json', 'Accept': 'text/javascript'}
+        response = requests.post(url_Get_Instance, data=json.dumps(data), headers=headers)
+
+        if response.status_code == 200:
+            response_content = response.content.decode()
+            json_response = json.loads(response_content)
+            running_status = json_response.get("Running")
+
+            # alternative check for 'Running'
+            # running_status = json_response["Running"] if "Running" in json_response else None
+
+            embed = discord.Embed(title='Necesse Server Details', color=discord.Color.blue())
+            embed.add_field(name='Server IP', value='67.4.158.45', inline=False)
+            embed.add_field(name='Server Port', value='15000', inline=False)
+            embed.add_field(name='Server Password', value='thebois', inline=False)
+            embed.add_field(name='Server Status',
+                            value=f'The Necesse server is currently {"running" if running_status else "not running or unable to get status"}.',
+                            inline=False)
+
+            await ctx.send(embed=embed)
+        else:
+            await ctx.send(f'Failed to get server info. HTTP status code: {response.status_code}')
+
+
+@necesse.command(name='start', help="Starts the spooling up process for Necesse.")
+async def necesse_start(ctx):
+    async with ctx.typing():
+        await login()
+
+        data = {
+            "InstanceName": "Necesse01",
+            "SESSIONID": token
+        }
+        headers = {'Content-type': 'application/json', 'Accept': 'text/javascript'}
+
+        response = requests.post(url_start, data=json.dumps(data), headers=headers)
+
+        if response.status_code == 200:
+            await asyncio.sleep(20)
+            await ctx.send('Successfully started spooling up the Necesse server!')
+        else:
+            await ctx.send(f'Failed to start the server. HTTP status code: {response.status_code}')
+
+
+@necesse.command(name='stop', help="Sends a stop signal to the Necesse game server.")
+async def necesse_stop(ctx):
+    async with ctx.typing():
+        await login()
+
+        data = {
+            "InstanceName": "Necesse01",
+            "SESSIONID": token
+        }
+
+        headers = {'Content-type': 'application/json', 'Accept': 'text/javascript'}
+
+        response = requests.post(url_stop, data=json.dumps(data), headers=headers)
+
+        if response.status_code == 200:
+            await ctx.send('Successfully sent a stop signal to the server! Give it time to stop completely.')
+        else:
+            await ctx.send(f'Failed to stop the server. HTTP status code: {response.status_code}')
+
+
+@necesse.command(name='restart', help="Sends a restart signal to the Necesse game server, may take awhile.")
+async def necesse_restart(ctx):
+    async with ctx.typing():
+        await login()
+
+        data = {
+            "InstanceName": "Necesse01",
+            "SESSIONID": token
+        }
+
+        headers = {'Content-type': 'application/json', 'Accept': 'text/javascript'}
+
+        response = requests.post(url_restart, data=json.dumps(data), headers=headers)
+
+        if response.status_code == 200:
+            await ctx.send('Successfully sent the restart signal to the server! This will take awhile and may fail...')
+        else:
+            await ctx.send(f'Failed to stop the server. HTTP status code: {response.status_code}')
+
+
+@bot.group(help="Icarus commands to start, stop, restart, and get info on the server")
+async def icarus(ctx):
+    if ctx.invoked_subcommand is None:
+        async with ctx.typing():
+            await login()
+            embed = discord.Embed(title="Icarus Bot Commands", description="These are the available commands",
+                                  color=discord.Color.blue())
+
+            for command in terraria.commands:
+                embed.add_field(name=command.name, value=command.help, inline=False)
+
+            await ctx.send(embed=embed)
+
+
+@icarus.command(name='info', help="Displays the server info for the Icarus game server.")
+async def icarus_info(ctx):
+    async with ctx.typing():
+        await login()
+        data = {
+            "InstanceId": icarus_instance_id,
+            "SESSIONID": token
+        }
+        headers = {'Content-type': 'application/json', 'Accept': 'text/javascript'}
+        response = requests.post(url_Get_Instance, data=json.dumps(data), headers=headers)
+
+        if response.status_code == 200:
+            response_content = response.content.decode()
+            json_response = json.loads(response_content)
+            running_status = json_response.get("Running")
+
+            # alternative check for 'Running'
+            # running_status = json_response["Running"] if "Running" in json_response else None
+
+            embed = discord.Embed(title='Icarus Server Details', color=discord.Color.blue())
+            embed.add_field(name='Server IP', value='67.4.158.45', inline=False)
+            embed.add_field(name='Server Port', value='19132', inline=False)
+            embed.add_field(name='Server Name', value='chambies private server', inline=False)
+            embed.add_field(name='Server Password', value='thebois', inline=False)
+            embed.add_field(name='Server Status',
+                            value=f'The Icarus server is currently {"running" if running_status else "not running or unable to get status"}.',
+                            inline=False)
+
+            await ctx.send(embed=embed)
+        else:
+            await ctx.send(f'Failed to get server info. HTTP status code: {response.status_code}')
+
+
+@icarus.command(name='start', help="Starts the spooling up process for Icarus.")
+async def icarus_start(ctx):
+    async with ctx.typing():
+        await login()
+
+        data = {
+            "InstanceName": "Icarus01",
+            "SESSIONID": token
+        }
+        headers = {'Content-type': 'application/json', 'Accept': 'text/javascript'}
+
+        response = requests.post(url_start, data=json.dumps(data), headers=headers)
+
+        if response.status_code == 200:
+            await asyncio.sleep(20)
+            await ctx.send('Successfully started spooling up the Icarus server!')
+        else:
+            await ctx.send(f'Failed to start the server. HTTP status code: {response.status_code}')
+
+
+@icarus.command(name='stop', help="Sends a stop signal to the Icarus game server.")
+async def icarus_stop(ctx):
+    async with ctx.typing():
+        await login()
+
+        data = {
+            "InstanceName": "Icarus01",
+            "SESSIONID": token
+        }
+
+        headers = {'Content-type': 'application/json', 'Accept': 'text/javascript'}
+
+        response = requests.post(url_stop, data=json.dumps(data), headers=headers)
+
+        if response.status_code == 200:
+            await ctx.send('Successfully sent a stop signal to the server! Give it time to stop completely.')
+        else:
+            await ctx.send(f'Failed to stop the server. HTTP status code: {response.status_code}')
+
+
+@icarus.command(name='restart', help="Sends a restart signal to the Icarus game server, may take awhile.")
+async def icarus_restart(ctx):
+    async with ctx.typing():
+        await login()
+
+        data = {
+            "InstanceName": "Icarus01",
+            "SESSIONID": token
+        }
+
+        headers = {'Content-type': 'application/json', 'Accept': 'text/javascript'}
+
+        response = requests.post(url_restart, data=json.dumps(data), headers=headers)
+
+        if response.status_code == 200:
+            await ctx.send('Successfully sent the restart signal to the server! This will take awhile and may fail...')
         else:
             await ctx.send(f'Failed to stop the server. HTTP status code: {response.status_code}')
 
