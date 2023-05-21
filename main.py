@@ -75,11 +75,44 @@ async def on_ready():
                 print(f"Unexpected content type: {resp.headers['Content-Type']}")
                 print(await resp.text())
 
+async def login():
+    login_data = {
+        "username": tokens.username,
+        "password": tokens.password,
+        "token": "",
+        "rememberMe": "true"
+    }
+
+    async with aiohttp.ClientSession() as session:
+        headers = {'Accept': 'application/json'}
+        async with session.post(url_login, json=login_data, headers=headers) as resp:
+
+            if resp.headers['Content-Type'] == 'application/json':
+                loginResult = await resp.json()
+
+                if "success" in loginResult.keys() and loginResult["success"]:
+                    print("Login successful")
+                    API.sessionId = loginResult["sessionID"]
+                    global token
+                    token = loginResult['sessionID']
+                    currentStatus = await API.Core_GetStatusAsync()
+                    CPUUsagePercent = currentStatus["Metrics"]["CPU Usage"]["Percent"]
+                    print(f"Current CPU usage is: {CPUUsagePercent}%")
+
+                else:
+                    print("Login failed")
+                    print(loginResult)
+
+            else:
+                print(f"Unexpected content type: {resp.headers['Content-Type']}")
+                print(await resp.text())
+
 
 @bot.group(help="ARK commands to start, stop, restart, and get info on the server")
 async def ark(ctx):
     if ctx.invoked_subcommand is None:
         async with ctx.typing():
+            login()
             embed = discord.Embed(title="Ark Bot Commands", description="These are the available commands",
                                   color=discord.Color.blue())
 
@@ -92,6 +125,7 @@ async def ark(ctx):
 @ark.command(name='info', help="Displays the server info for Ark Survival Evolved game server.")
 async def ark_info(ctx):
     async with ctx.typing():
+        login()
         data = {
             "InstanceId": ark_instance_id,
             "SESSIONID": token
@@ -125,6 +159,7 @@ async def ark_info(ctx):
                                 "game.")
 async def ark_start(ctx):
     async with ctx.typing():
+        login()
 
         data = {
             "InstanceName": "ARKSurvivalEvolved01",
@@ -144,6 +179,7 @@ async def ark_start(ctx):
 @ark.command(name='stop', help="Sends a stop signal to the Ark Survival Evolved game server.")
 async def ark_stop(ctx):
     async with ctx.typing():
+        login()
 
         data = {
             "InstanceName": "ARKSurvivalEvolved01",
@@ -163,6 +199,7 @@ async def ark_stop(ctx):
 @ark.command(name='restart', help="Sends a restart signal to the Ark Survival Evolved game server, may take awhile.")
 async def ark_restart(ctx):
     async with ctx.typing():
+        login()
 
         data = {
             "InstanceName": "ARKSurvivalEvolved01",
@@ -183,6 +220,7 @@ async def ark_restart(ctx):
 async def terraria(ctx):
     if ctx.invoked_subcommand is None:
         async with ctx.typing():
+            login()
             embed = discord.Embed(title="Terraria Bot Commands", description="These are the available commands",
                                   color=discord.Color.blue())
 
@@ -195,6 +233,7 @@ async def terraria(ctx):
 @terraria.command(name='info', help="Displays the server info for the Terraria game server.")
 async def terraria_info(ctx):
     async with ctx.typing():
+        login()
         data = {
             "InstanceId": terraria_instance_id,
             "SESSIONID": token
@@ -238,6 +277,7 @@ async def terraria_info(ctx):
 @terraria.command(name='start', help="Starts up the Terraria game server relatively quick.")
 async def terraria_start(ctx):
     async with ctx.typing():
+        login()
 
         data = {
             "InstanceName": "tModLoader1401",
@@ -257,6 +297,7 @@ async def terraria_start(ctx):
 @terraria.command(name='stop', help="Sends a stop signal to the Terraria game server.")
 async def terraria_stop(ctx):
     async with ctx.typing():
+        login()
 
         data = {
             "InstanceName": "tModLoader1401",
@@ -276,6 +317,7 @@ async def terraria_stop(ctx):
 @terraria.command(name='restart', help="Sends a restart signal to the Terraria game server.")
 async def terraria_restart(ctx):
     async with ctx.typing():
+        login()
 
         data = {
             "InstanceName": "tModLoader1401",
