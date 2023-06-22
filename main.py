@@ -38,6 +38,12 @@ icarus_instance_id = "25bb4b25-053e-4992-b69f-3ac20ab5b105"
 
 global token
 token = None
+@bot.command(name="getinstances")
+async def get_instances(ctx):
+    await login()
+    headers = {'Content-type': 'application/json', 'Accept': 'text/javascript'}
+    response = requests.post(url_Get_Instance, headers=headers)
+
 
 
 @bot.event
@@ -159,7 +165,7 @@ async def ark_info(ctx):
             embed.add_field(name='Server Name', value='Chambies Private Server', inline=False)
             embed.add_field(name='Server Password', value='thebois', inline=False)
             embed.add_field(name='Server Status',
-                            value=f'The Ark server is currently {"running" if running_status else "not running or unable to get status"}.',
+                            value=f'The Ark server is currently {"running" if running_status else "not running"}.',
                             inline=False)
 
             await ctx.send(embed=embed)
