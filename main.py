@@ -36,9 +36,14 @@ terraria_instance_id = "d5275053-eafc-493e-bbba-a5658231b7fe"
 necesse_instance_id = "592aa884-68c2-47ff-aaeb-cab0be49b395"
 icarus_instance_id = "25bb4b25-053e-4992-b69f-3ac20ab5b105"
 minecraft_instance_id = "123ffacd-896d-49db-b35a-14e76d13042a"
+sevendaystodie_instance_id = "4b116884-02bb-4023-b426-aa08e6670458"
+satisfactory_instance_id = "ba176a72-d8f7-4bfc-b59d-52a4e7814612"
+projectzomboid_instance_id = "1c89f2a2-2586-46d2-945b-301cad9b6e08"
 
 global token
 token = None
+
+
 @bot.command(name="getinstances")
 async def get_instances(ctx):
     await login()
@@ -48,7 +53,6 @@ async def get_instances(ctx):
     }
     response = requests.post(url_Instances_Status, data=json.dumps(data), headers=headers)
     test = "test"
-
 
 
 @bot.event
@@ -564,7 +568,8 @@ async def minecraft(ctx):
     if ctx.invoked_subcommand is None:
         async with ctx.typing():
             await login()
-            embed = discord.Embed(title="Vanilla Minecraft Bot Commands", description="These are the available commands",
+            embed = discord.Embed(title="Vanilla Minecraft Bot Commands",
+                                  description="These are the available commands",
                                   color=discord.Color.blue())
 
             for command in minecraft.commands:
@@ -662,7 +667,330 @@ async def minecraft_restart(ctx):
         if response.status_code == 200:
             await ctx.send('Successfully restarted the server! This will take awhile and may fail...')
         else:
+            await ctx.send(f'Failed to restart the server. HTTP status code: {response.status_code}')
+
+
+@bot.group(help="Satisfactory commands to start, stop, restart, and get info on the server")
+async def satisfactory(ctx):
+    if ctx.invoked_subcommand is None:
+        async with ctx.typing():
+            await login()
+            embed = discord.Embed(title="Satisfactory Bot Commands", description="These are the available commands",
+                                  color=discord.Color.blue())
+
+            for command in satisfactory.commands:
+                embed.add_field(name=command.name, value=command.help, inline=False)
+
+            await ctx.send(embed=embed)
+
+
+@satisfactory.command(name='info', help="Displays the server info for Satisfactory game server.")
+async def satisfactory_info(ctx):
+    async with ctx.typing():
+        await login()
+        data = {
+            "InstanceId": satisfactory_instance_id,
+            "SESSIONID": token
+        }
+        headers = {'Content-type': 'application/json', 'Accept': 'text/javascript'}
+        response = requests.post(url_Get_Instance, data=json.dumps(data), headers=headers)
+
+        if response.status_code == 200:
+            response_content = response.content.decode()
+            json_response = json.loads(response_content)
+            running_status = json_response.get("Running")
+
+            # alternative check for 'Running'
+            # running_status = json_response["Running"] if "Running" in json_response else None
+
+            embed = discord.Embed(title='Satisfactory Server Details (NOT EXPERIMENTAL)', color=discord.Color.blue())
+            embed.add_field(name='Server IP', value='67.4.158.45', inline=False)
+            embed.add_field(name='Server Port', value='7780', inline=False)
+            embed.add_field(name='Server Status',
+                            value=f'The Satisfactory server is currently {"running" if running_status else "not running"}.',
+                            inline=False)
+
+            await ctx.send(embed=embed)
+        else:
+            await ctx.send(f'Failed to get server info. HTTP status code: {response.status_code}')
+
+
+@satisfactory.command(name='start', help="Starts the spooling up process for Satisfactory.")
+async def satisfactory_start(ctx):
+    async with ctx.typing():
+        await login()
+
+        data = {
+            "InstanceName": "Satisfactory01",
+            "SESSIONID": token
+        }
+        headers = {'Content-type': 'application/json', 'Accept': 'text/javascript'}
+
+        response = requests.post(url_start, data=json.dumps(data), headers=headers)
+
+        if response.status_code == 200:
+            await asyncio.sleep(20)
+            await ctx.send('Successfully started spooling up the Satisfactory server!')
+        else:
+            await ctx.send(f'Failed to start the server. HTTP status code: {response.status_code}')
+
+
+@satisfactory.command(name='stop', help="Sends a stop signal to the Satisfactory game server.")
+async def satisfactory_stop(ctx):
+    async with ctx.typing():
+        await login()
+
+        data = {
+            "InstanceName": "Satisfactory01",
+            "SESSIONID": token
+        }
+
+        headers = {'Content-type': 'application/json', 'Accept': 'text/javascript'}
+
+        response = requests.post(url_stop, data=json.dumps(data), headers=headers)
+
+        if response.status_code == 200:
+            await ctx.send('Successfully sent a stop signal to the server! Give it time to stop completely.')
+        else:
             await ctx.send(f'Failed to stop the server. HTTP status code: {response.status_code}')
+
+
+@satisfactory.command(name='restart', help="Sends a restart signal to the Satisfactory game server, may take awhile.")
+async def satisfactory_restart(ctx):
+    async with ctx.typing():
+        await login()
+
+        data = {
+            "InstanceName": "Satisfactory01",
+            "SESSIONID": token
+        }
+
+        headers = {'Content-type': 'application/json', 'Accept': 'text/javascript'}
+
+        response = requests.post(url_restart, data=json.dumps(data), headers=headers)
+
+        if response.status_code == 200:
+            await ctx.send('Successfully restarted the server! This will take awhile and may fail...')
+        else:
+            await ctx.send(f'Failed to restart the server. HTTP status code: {response.status_code}')
+
+
+@bot.group(help="Seven Days To Die commands to start, stop, restart, and get info on the server")
+async def sevendaystodie(ctx):
+    if ctx.invoked_subcommand is None:
+        async with ctx.typing():
+            await login()
+            embed = discord.Embed(title="Seven Days To Die Bot Commands",
+                                  description="These are the available commands",
+                                  color=discord.Color.blue())
+
+            for command in sevendaystodie.commands:
+                embed.add_field(name=command.name, value=command.help, inline=False)
+
+            await ctx.send(embed=embed)
+
+
+@sevendaystodie.command(name='info', help="Displays the server info for Seven Days To Die game server.")
+async def sevendaystodie_info(ctx):
+    async with ctx.typing():
+        await login()
+        data = {
+            "InstanceId": sevendaystodie_instance_id,
+            "SESSIONID": token
+        }
+        headers = {'Content-type': 'application/json', 'Accept': 'text/javascript'}
+        response = requests.post(url_Get_Instance, data=json.dumps(data), headers=headers)
+
+        if response.status_code == 200:
+            response_content = response.content.decode()
+            json_response = json.loads(response_content)
+            running_status = json_response.get("Running")
+
+            # alternative check for 'Running'
+            # running_status = json_response["Running"] if "Running" in json_response else None
+
+            embed = discord.Embed(title='Seven Days To Die Server Details', color=discord.Color.blue())
+            embed.add_field(name='Server IP', value='67.4.158.45', inline=False)
+            embed.add_field(name='Server Port', value='27017', inline=False)
+            embed.add_field(name='Server Name', value='The Bois Server', inline=False)
+            embed.add_field(name='Server Password', value='thebois', inline=False)
+            embed.add_field(name='Server Status',
+                            value=f'The Seven Days To Die server is currently {"running" if running_status else "not running"}.',
+                            inline=False)
+
+            await ctx.send(embed=embed)
+        else:
+            await ctx.send(f'Failed to get server info. HTTP status code: {response.status_code}')
+
+
+@sevendaystodie.command(name='start', help="Starts the spooling up process for Seven Days To Die.")
+async def sevendaystodie_start(ctx):
+    async with ctx.typing():
+        await login()
+
+        data = {
+            "InstanceName": "SevenDaysToDie01",
+            "SESSIONID": token
+        }
+        headers = {'Content-type': 'application/json', 'Accept': 'text/javascript'}
+
+        response = requests.post(url_start, data=json.dumps(data), headers=headers)
+
+        if response.status_code == 200:
+            await asyncio.sleep(20)
+            await ctx.send('Successfully started spooling up the Seven Days To Die server!')
+        else:
+            await ctx.send(f'Failed to start the server. HTTP status code: {response.status_code}')
+
+
+@sevendaystodie.command(name='stop', help="Sends a stop signal to the Seven Days To Die game server.")
+async def sevendaystodie_stop(ctx):
+    async with ctx.typing():
+        await login()
+
+        data = {
+            "InstanceName": "SevenDaysToDie01",
+            "SESSIONID": token
+        }
+
+        headers = {'Content-type': 'application/json', 'Accept': 'text/javascript'}
+
+        response = requests.post(url_stop, data=json.dumps(data), headers=headers)
+
+        if response.status_code == 200:
+            await ctx.send('Successfully sent a stop signal to the server! Give it time to stop completely.')
+        else:
+            await ctx.send(f'Failed to stop the server. HTTP status code: {response.status_code}')
+
+
+@sevendaystodie.command(name='restart',
+                        help="Sends a restart signal to the Seven Days To Die game server, may take awhile.")
+async def sevendaystodie_restart(ctx):
+    async with ctx.typing():
+        await login()
+
+        data = {
+            "InstanceName": "SevenDaysToDie01",
+            "SESSIONID": token
+        }
+
+        headers = {'Content-type': 'application/json', 'Accept': 'text/javascript'}
+
+        response = requests.post(url_restart, data=json.dumps(data), headers=headers)
+
+        if response.status_code == 200:
+            await ctx.send('Successfully restarted the server! This will take awhile and may fail...')
+        else:
+            await ctx.send(f'Failed to restart the server. HTTP status code: {response.status_code}')
+
+
+@bot.group(help="Project Zomboid commands to start, stop, restart, and get info on the server")
+async def projectzomboid(ctx):
+    if ctx.invoked_subcommand is None:
+        async with ctx.typing():
+            await login()
+            embed = discord.Embed(title="Project Zomboid Bot Commands",
+                                  description="These are the available commands",
+                                  color=discord.Color.blue())
+
+            for command in projectzomboid.commands:
+                embed.add_field(name=command.name, value=command.help, inline=False)
+
+            await ctx.send(embed=embed)
+
+
+@projectzomboid.command(name='info', help="Displays the server info for Project Zomboid game server.")
+async def projectzomboid_info(ctx):
+    async with ctx.typing():
+        await login()
+        data = {
+            "InstanceId": projectzomboid_instance_id,
+            "SESSIONID": token
+        }
+        headers = {'Content-type': 'application/json', 'Accept': 'text/javascript'}
+        response = requests.post(url_Get_Instance, data=json.dumps(data), headers=headers)
+
+        if response.status_code == 200:
+            response_content = response.content.decode()
+            json_response = json.loads(response_content)
+            running_status = json_response.get("Running")
+
+            # alternative check for 'Running'
+            # running_status = json_response["Running"] if "Running" in json_response else None
+
+            embed = discord.Embed(title='Project Zomboid Server Details', color=discord.Color.blue())
+            embed.add_field(name='Server IP', value='67.4.158.45', inline=False)
+            embed.add_field(name='Server Port', value='19133', inline=False)
+            embed.add_field(name='Server Name', value='The Bois Server', inline=False)
+            embed.add_field(name='Server Password', value='cumbo', inline=False)
+            embed.add_field(name='Server Status',
+                            value=f'The Project Zomboid server is currently {"running" if running_status else "not running"}.',
+                            inline=False)
+
+            await ctx.send(embed=embed)
+        else:
+            await ctx.send(f'Failed to get server info. HTTP status code: {response.status_code}')
+
+
+@projectzomboid.command(name='start', help="Starts the spooling up process for Project Zomboid.")
+async def projectzomboid_start(ctx):
+    async with ctx.typing():
+        await login()
+
+        data = {
+            "InstanceName": "ProjectZomboid01",
+            "SESSIONID": token
+        }
+        headers = {'Content-type': 'application/json', 'Accept': 'text/javascript'}
+
+        response = requests.post(url_start, data=json.dumps(data), headers=headers)
+
+        if response.status_code == 200:
+            await asyncio.sleep(20)
+            await ctx.send('Successfully started spooling up the Project Zomboid server!')
+        else:
+            await ctx.send(f'Failed to start the server. HTTP status code: {response.status_code}')
+
+
+@projectzomboid.command(name='stop', help="Sends a stop signal to the Project Zomboid game server.")
+async def projectzomboid_stop(ctx):
+    async with ctx.typing():
+        await login()
+
+        data = {
+            "InstanceName": "ProjectZomboid01",
+            "SESSIONID": token
+        }
+
+        headers = {'Content-type': 'application/json', 'Accept': 'text/javascript'}
+
+        response = requests.post(url_stop, data=json.dumps(data), headers=headers)
+
+        if response.status_code == 200:
+            await ctx.send('Successfully sent a stop signal to the server! Give it time to stop completely.')
+        else:
+            await ctx.send(f'Failed to stop the server. HTTP status code: {response.status_code}')
+
+
+@projectzomboid.command(name='restart',
+                        help="Sends a restart signal to the Project Zomboid game server, may take awhile.")
+async def projectzomboid_restart(ctx):
+    async with ctx.typing():
+        await login()
+
+        data = {
+            "InstanceName": "ProjectZomboid01",
+            "SESSIONID": token
+        }
+
+        headers = {'Content-type': 'application/json', 'Accept': 'text/javascript'}
+
+        response = requests.post(url_restart, data=json.dumps(data), headers=headers)
+
+        if response.status_code == 200:
+            await ctx.send('Successfully restarted the server! This will take awhile and may fail...')
+        else:
+            await ctx.send(f'Failed to restart the server. HTTP status code: {response.status_code}')
 
 
 @bot.command(help="displays helpful commands.")
