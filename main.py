@@ -35,6 +35,7 @@ ark_instance_id = "2033ec8f-244f-4af2-a568-4fb362448491"
 terraria_instance_id = "d5275053-eafc-493e-bbba-a5658231b7fe"
 necesse_instance_id = "592aa884-68c2-47ff-aaeb-cab0be49b395"
 icarus_instance_id = "25bb4b25-053e-4992-b69f-3ac20ab5b105"
+minecraft_instance_id = "123ffacd-896d-49db-b35a-14e76d13042a"
 
 global token
 token = None
@@ -42,7 +43,11 @@ token = None
 async def get_instances(ctx):
     await login()
     headers = {'Content-type': 'application/json', 'Accept': 'text/javascript'}
-    response = requests.post(url_Get_Instance, headers=headers)
+    data = {
+        "SESSIONID": token
+    }
+    response = requests.post(url_Instances_Status, data=json.dumps(data), headers=headers)
+    test = "test"
 
 
 
@@ -113,17 +118,6 @@ async def login():
             else:
                 print(f"Unexpected content type: {resp.headers['Content-Type']}")
                 print(await resp.text())
-
-
-# use this command to get all instance id's
-# @bot.command(name="getinstances")
-# async def get_instances(ctx):
-#     headers = {'Content-type': 'application/json', 'Accept': 'text/javascript'}
-#     data = {
-#         "SESSIONID": token
-#     }
-#     response = requests.post(url_Instances_Status, data=json.dumps(data), headers=headers)
-#     test = 'test'
 
 
 @bot.group(help="ARK commands to start, stop, restart, and get info on the server")
@@ -561,6 +555,112 @@ async def icarus_restart(ctx):
 
         if response.status_code == 200:
             await ctx.send('Successfully sent the restart signal to the server! This will take awhile and may fail...')
+        else:
+            await ctx.send(f'Failed to stop the server. HTTP status code: {response.status_code}')
+
+
+@bot.group(help="Vanilla Minecraft commands to start, stop, restart, and get info on the server")
+async def minecraft(ctx):
+    if ctx.invoked_subcommand is None:
+        async with ctx.typing():
+            await login()
+            embed = discord.Embed(title="Vanilla Minecraft Bot Commands", description="These are the available commands",
+                                  color=discord.Color.blue())
+
+            for command in minecraft.commands:
+                embed.add_field(name=command.name, value=command.help, inline=False)
+
+            await ctx.send(embed=embed)
+
+
+@minecraft.command(name='info', help="Displays the server info for Vanilla Minecraft game server.")
+async def minecraft_info(ctx):
+    async with ctx.typing():
+        await login()
+        data = {
+            "InstanceId": minecraft_instance_id,
+            "SESSIONID": token
+        }
+        headers = {'Content-type': 'application/json', 'Accept': 'text/javascript'}
+        response = requests.post(url_Get_Instance, data=json.dumps(data), headers=headers)
+
+        if response.status_code == 200:
+            response_content = response.content.decode()
+            json_response = json.loads(response_content)
+            running_status = json_response.get("Running")
+
+            # alternative check for 'Running'
+            # running_status = json_response["Running"] if "Running" in json_response else None
+
+            embed = discord.Embed(title='Vanilla Minecraft Server Details', color=discord.Color.blue())
+            embed.add_field(name='Server IP', value='67.4.158.45', inline=False)
+            embed.add_field(name='Server Port', value='25565', inline=False)
+            embed.add_field(name='Server Name', value='The Bois Server', inline=False)
+            embed.add_field(name='Server Status',
+                            value=f'The Vanilla Minecraft server is currently {"running" if running_status else "not running"}.',
+                            inline=False)
+
+            await ctx.send(embed=embed)
+        else:
+            await ctx.send(f'Failed to get server info. HTTP status code: {response.status_code}')
+
+
+@minecraft.command(name='start', help="Starts the spooling up process for Vanilla Minecraft.")
+async def minecraft_start(ctx):
+    async with ctx.typing():
+        await login()
+
+        data = {
+            "InstanceName": "Minecraft01",
+            "SESSIONID": token
+        }
+        headers = {'Content-type': 'application/json', 'Accept': 'text/javascript'}
+
+        response = requests.post(url_start, data=json.dumps(data), headers=headers)
+
+        if response.status_code == 200:
+            await asyncio.sleep(20)
+            await ctx.send('Successfully started spooling up the Vanilla Minecraft server!')
+        else:
+            await ctx.send(f'Failed to start the server. HTTP status code: {response.status_code}')
+
+
+@minecraft.command(name='stop', help="Sends a stop signal to the Vanilla Minecraft game server.")
+async def minecraft_stop(ctx):
+    async with ctx.typing():
+        await login()
+
+        data = {
+            "InstanceName": "Minecraft01",
+            "SESSIONID": token
+        }
+
+        headers = {'Content-type': 'application/json', 'Accept': 'text/javascript'}
+
+        response = requests.post(url_stop, data=json.dumps(data), headers=headers)
+
+        if response.status_code == 200:
+            await ctx.send('Successfully sent a stop signal to the server! Give it time to stop completely.')
+        else:
+            await ctx.send(f'Failed to stop the server. HTTP status code: {response.status_code}')
+
+
+@minecraft.command(name='restart', help="Sends a restart signal to the Vanilla Minecraft game server, may take awhile.")
+async def minecraft_restart(ctx):
+    async with ctx.typing():
+        await login()
+
+        data = {
+            "InstanceName": "Minecraft01",
+            "SESSIONID": token
+        }
+
+        headers = {'Content-type': 'application/json', 'Accept': 'text/javascript'}
+
+        response = requests.post(url_restart, data=json.dumps(data), headers=headers)
+
+        if response.status_code == 200:
+            await ctx.send('Successfully restarted the server! This will take awhile and may fail...')
         else:
             await ctx.send(f'Failed to stop the server. HTTP status code: {response.status_code}')
 
