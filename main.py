@@ -36,7 +36,7 @@ terraria_instance_id = "d5275053-eafc-493e-bbba-a5658231b7fe"
 necesse_instance_id = "592aa884-68c2-47ff-aaeb-cab0be49b395"
 icarus_instance_id = "25bb4b25-053e-4992-b69f-3ac20ab5b105"
 minecraft_instance_id = "123ffacd-896d-49db-b35a-14e76d13042a"
-sevendaystodie_instance_id = "4b116884-02bb-4023-b426-aa08e6670458"
+sevendaystodie_instance_id = "c1e805b3-d386-4de8-80e1-fae15cf1c589"
 satisfactory_instance_id = "ba176a72-d8f7-4bfc-b59d-52a4e7814612"
 projectzomboid_instance_id = "1c89f2a2-2586-46d2-945b-301cad9b6e08"
 
