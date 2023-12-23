@@ -39,6 +39,7 @@ minecraft_instance_id = "123ffacd-896d-49db-b35a-14e76d13042a"
 sevendaystodie_instance_id = "c1e805b3-d386-4de8-80e1-fae15cf1c589"
 satisfactory_instance_id = "ba176a72-d8f7-4bfc-b59d-52a4e7814612"
 projectzomboid_instance_id = "1c89f2a2-2586-46d2-945b-301cad9b6e08"
+beamng_instance_id = "56309d72-174f-4fd6-bd29-75cdd0e3ef4e"
 
 global token
 token = None
@@ -52,7 +53,8 @@ async def get_instances(ctx):
         "SESSIONID": token
     }
     response = requests.post(url_Instances_Status, data=json.dumps(data), headers=headers)
-    test = "test"
+    test = response.content
+    print(test)
 
 
 @bot.event
@@ -980,6 +982,111 @@ async def projectzomboid_restart(ctx):
 
         data = {
             "InstanceName": "ProjectZomboid01",
+            "SESSIONID": token
+        }
+
+        headers = {'Content-type': 'application/json', 'Accept': 'text/javascript'}
+
+        response = requests.post(url_restart, data=json.dumps(data), headers=headers)
+
+        if response.status_code == 200:
+            await ctx.send('Successfully restarted the server! This will take awhile and may fail...')
+        else:
+            await ctx.send(f'Failed to restart the server. HTTP status code: {response.status_code}')
+
+
+@bot.group(help="BeamNG commands to start, stop, restart, and get info on the server")
+async def beamng(ctx):
+    if ctx.invoked_subcommand is None:
+        async with ctx.typing():
+            await login()
+            embed = discord.Embed(title="BeamNG Bot Commands", description="These are the available commands",
+                                  color=discord.Color.blue())
+
+            for command in beamng.commands:
+                embed.add_field(name=command.name, value=command.help, inline=False)
+
+            await ctx.send(embed=embed)
+
+
+@beamng.command(name='info', help="Displays the server info for BeamNG game server.")
+async def beamng_info(ctx):
+    async with ctx.typing():
+        await login()
+        data = {
+            "InstanceId": beamng_instance_id,
+            "SESSIONID": token
+        }
+        headers = {'Content-type': 'application/json', 'Accept': 'text/javascript'}
+        response = requests.post(url_Get_Instance, data=json.dumps(data), headers=headers)
+
+        if response.status_code == 200:
+            response_content = response.content.decode()
+            json_response = json.loads(response_content)
+            running_status = json_response.get("Running")
+
+            # alternative check for 'Running'
+            # running_status = json_response["Running"] if "Running" in json_response else None
+
+            embed = discord.Embed(title='BeamNG Server Details', color=discord.Color.blue())
+            embed.add_field(name='Server IP', value='67.4.161.61', inline=False)
+            embed.add_field(name='Server Port', value='34197', inline=False)
+            embed.add_field(name='Server Status',
+                            value=f'The BeamNG server is currently {"running" if running_status else "not running"}.',
+                            inline=False)
+
+            await ctx.send(embed=embed)
+        else:
+            await ctx.send(f'Failed to get server info. HTTP status code: {response.status_code}')
+
+
+@beamng.command(name='start', help="Starts the spooling up process for BeamNG.")
+async def beamng_start(ctx):
+    async with ctx.typing():
+        await login()
+
+        data = {
+            "InstanceName": "BeamMP01",
+            "SESSIONID": token
+        }
+        headers = {'Content-type': 'application/json', 'Accept': 'text/javascript'}
+
+        response = requests.post(url_start, data=json.dumps(data), headers=headers)
+
+        if response.status_code == 200:
+            await asyncio.sleep(20)
+            await ctx.send('Successfully started spooling up the BeamNG server!')
+        else:
+            await ctx.send(f'Failed to start the server. HTTP status code: {response.status_code}')
+
+
+@beamng.command(name='stop', help="Sends a stop signal to the BeamNG game server.")
+async def beamng_stop(ctx):
+    async with ctx.typing():
+        await login()
+
+        data = {
+            "InstanceName": "BeamMP01",
+            "SESSIONID": token
+        }
+
+        headers = {'Content-type': 'application/json', 'Accept': 'text/javascript'}
+
+        response = requests.post(url_stop, data=json.dumps(data), headers=headers)
+
+        if response.status_code == 200:
+            await ctx.send('Successfully sent a stop signal to the server! Give it time to stop completely.')
+        else:
+            await ctx.send(f'Failed to stop the server. HTTP status code: {response.status_code}')
+
+
+@beamng.command(name='restart', help="Sends a restart signal to the BeamNG game server, may take awhile.")
+async def beamng_restart(ctx):
+    async with ctx.typing():
+        await login()
+
+        data = {
+            "InstanceName": "BeamMP01",
             "SESSIONID": token
         }
 
