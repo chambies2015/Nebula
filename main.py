@@ -40,21 +40,22 @@ sevendaystodie_instance_id = "c1e805b3-d386-4de8-80e1-fae15cf1c589"
 satisfactory_instance_id = "ba176a72-d8f7-4bfc-b59d-52a4e7814612"
 projectzomboid_instance_id = "1c89f2a2-2586-46d2-945b-301cad9b6e08"
 beamng_instance_id = "56309d72-174f-4fd6-bd29-75cdd0e3ef4e"
+sotf_instance_id = "6c7417c4-34d0-45d0-abc1-37ce4ad43009"
 
 global token
 token = None
 
 
-@bot.command(name="getinstances")
-async def get_instances(ctx):
-    await login()
-    headers = {'Content-type': 'application/json', 'Accept': 'text/javascript'}
-    data = {
-        "SESSIONID": token
-    }
-    response = requests.post(url_Instances_Status, data=json.dumps(data), headers=headers)
-    test = response.content
-    print(test)
+# @bot.command(name="getinstances")
+# async def get_instances(ctx):
+#     await login()
+#     headers = {'Content-type': 'application/json', 'Accept': 'text/javascript'}
+#     data = {
+#         "SESSIONID": token
+#     }
+#     response = requests.post(url_Instances_Status, data=json.dumps(data), headers=headers)
+#     test = response.content
+#     print(test)
 
 
 @bot.event
@@ -1099,6 +1100,110 @@ async def beamng_restart(ctx):
         else:
             await ctx.send(f'Failed to restart the server. HTTP status code: {response.status_code}')
 
+
+@bot.group(help="Sons Of The Forest commands to start, stop, restart, and get info on the server")
+async def sotf(ctx):
+    if ctx.invoked_subcommand is None:
+        async with ctx.typing():
+            await login()
+            embed = discord.Embed(title="Sons Of The Forest Bot Commands", description="These are the available commands",
+                                  color=discord.Color.blue())
+
+            for command in beamng.commands:
+                embed.add_field(name=command.name, value=command.help, inline=False)
+
+            await ctx.send(embed=embed)
+
+
+@sotf.command(name='info', help="Displays the server info for Sons Of The Forest game server.")
+async def sotf_info(ctx):
+    async with ctx.typing():
+        await login()
+        data = {
+            "InstanceId": sotf_instance_id,
+            "SESSIONID": token
+        }
+        headers = {'Content-type': 'application/json', 'Accept': 'text/javascript'}
+        response = requests.post(url_Get_Instance, data=json.dumps(data), headers=headers)
+
+        if response.status_code == 200:
+            response_content = response.content.decode()
+            json_response = json.loads(response_content)
+            running_status = json_response.get("Running")
+
+            # alternative check for 'Running'
+            # running_status = json_response["Running"] if "Running" in json_response else None
+
+            embed = discord.Embed(title='Sons Of The Forest Server Details', color=discord.Color.blue())
+            embed.add_field(name='Server IP', value='67.4.161.61', inline=False)
+            embed.add_field(name='Server Port', value='8777', inline=False)
+            embed.add_field(name='Server Status',
+                            value=f'The Sons Of The Forest server is currently {"running" if running_status else "not running"}.',
+                            inline=False)
+
+            await ctx.send(embed=embed)
+        else:
+            await ctx.send(f'Failed to get server info. HTTP status code: {response.status_code}')
+
+
+@sotf.command(name='start', help="Starts the spooling up process for Sons Of The Forest.")
+async def sotf_start(ctx):
+    async with ctx.typing():
+        await login()
+
+        data = {
+            "InstanceName": "SonsOfTheForest01",
+            "SESSIONID": token
+        }
+        headers = {'Content-type': 'application/json', 'Accept': 'text/javascript'}
+
+        response = requests.post(url_start, data=json.dumps(data), headers=headers)
+
+        if response.status_code == 200:
+            await asyncio.sleep(20)
+            await ctx.send('Successfully started spooling up the Sons Of The Forest server!')
+        else:
+            await ctx.send(f'Failed to start the server. HTTP status code: {response.status_code}')
+
+
+@sotf.command(name='stop', help="Sends a stop signal to the Sons Of The Forest game server.")
+async def sotf_stop(ctx):
+    async with ctx.typing():
+        await login()
+
+        data = {
+            "InstanceName": "SonsOfTheForest01",
+            "SESSIONID": token
+        }
+
+        headers = {'Content-type': 'application/json', 'Accept': 'text/javascript'}
+
+        response = requests.post(url_stop, data=json.dumps(data), headers=headers)
+
+        if response.status_code == 200:
+            await ctx.send('Successfully sent a stop signal to the server! Give it time to stop completely.')
+        else:
+            await ctx.send(f'Failed to stop the server. HTTP status code: {response.status_code}')
+
+
+@sotf.command(name='restart', help="Sends a restart signal to the Sons Of The Forest game server, may take awhile.")
+async def sotf_restart(ctx):
+    async with ctx.typing():
+        await login()
+
+        data = {
+            "InstanceName": "SonsOfTheForest01",
+            "SESSIONID": token
+        }
+
+        headers = {'Content-type': 'application/json', 'Accept': 'text/javascript'}
+
+        response = requests.post(url_restart, data=json.dumps(data), headers=headers)
+
+        if response.status_code == 200:
+            await ctx.send('Successfully sent a restart signal to the server! This will take awhile and may fail...')
+        else:
+            await ctx.send(f'Failed to restart the server. HTTP status code: {response.status_code}')
 
 @bot.command(help="displays helpful commands.")
 async def help(ctx):
