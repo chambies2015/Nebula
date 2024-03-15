@@ -1136,7 +1136,7 @@ async def sotf_info(ctx):
 
             embed = discord.Embed(title='Sons Of The Forest Server Details', color=discord.Color.blue())
             embed.add_field(name='Server IP', value='67.4.161.61', inline=False)
-            embed.add_field(name='Server Port', value='8777', inline=False)
+            embed.add_field(name='Server Port', value='37766', inline=False)
             embed.add_field(name='Server Status',
                             value=f'The Sons Of The Forest server is currently {"running" if running_status else "not running"}.',
                             inline=False)
