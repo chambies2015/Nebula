@@ -41,6 +41,7 @@ satisfactory_instance_id = "ba176a72-d8f7-4bfc-b59d-52a4e7814612"
 projectzomboid_instance_id = "1c89f2a2-2586-46d2-945b-301cad9b6e08"
 beamng_instance_id = "56309d72-174f-4fd6-bd29-75cdd0e3ef4e"
 sotf_instance_id = "6c7417c4-34d0-45d0-abc1-37ce4ad43009"
+enshrouded_instance_id = "d8019f76-cd48-4781-9b84-12506b14022c"
 
 global token
 token = None
@@ -1193,6 +1194,112 @@ async def sotf_restart(ctx):
 
         data = {
             "InstanceName": "SonsOfTheForest01",
+            "SESSIONID": token
+        }
+
+        headers = {'Content-type': 'application/json', 'Accept': 'text/javascript'}
+
+        response = requests.post(url_restart, data=json.dumps(data), headers=headers)
+
+        if response.status_code == 200:
+            await ctx.send('Successfully sent a restart signal to the server! This will take awhile and may fail...')
+        else:
+            await ctx.send(f'Failed to restart the server. HTTP status code: {response.status_code}')
+
+
+
+@bot.group(help="Enshrouded commands to start, stop, restart, and get info on the server")
+async def enshrouded(ctx):
+    if ctx.invoked_subcommand is None:
+        async with ctx.typing():
+            await login()
+            embed = discord.Embed(title="Enshrouded Commands", description="These are the available commands",
+                                  color=discord.Color.blue())
+
+            for command in beamng.commands:
+                embed.add_field(name=command.name, value=command.help, inline=False)
+
+            await ctx.send(embed=embed)
+
+
+@enshrouded.command(name='info', help="Displays the server info for Enshrouded game server.")
+async def enshrouded_info(ctx):
+    async with ctx.typing():
+        await login()
+        data = {
+            "InstanceId": enshrouded_instance_id,
+            "SESSIONID": token
+        }
+        headers = {'Content-type': 'application/json', 'Accept': 'text/javascript'}
+        response = requests.post(url_Get_Instance, data=json.dumps(data), headers=headers)
+
+        if response.status_code == 200:
+            response_content = response.content.decode()
+            json_response = json.loads(response_content)
+            running_status = json_response.get("Running")
+
+            # alternative check for 'Running'
+            # running_status = json_response["Running"] if "Running" in json_response else None
+
+            embed = discord.Embed(title='Enshrouded Details', color=discord.Color.blue())
+            embed.add_field(name='Server IP', value='67.4.161.61', inline=False)
+            embed.add_field(name='Server Port', value='15637', inline=False)
+            embed.add_field(name='Server Status',
+                            value=f'The Enshrouded server is currently {"running" if running_status else "not running"}.',
+                            inline=False)
+
+            await ctx.send(embed=embed)
+        else:
+            await ctx.send(f'Failed to get server info. HTTP status code: {response.status_code}')
+
+
+@enshrouded.command(name='start', help="Starts the spooling up process for Enshrouded.")
+async def enshrouded_start(ctx):
+    async with ctx.typing():
+        await login()
+
+        data = {
+            "InstanceName": "Enshrouded01",
+            "SESSIONID": token
+        }
+        headers = {'Content-type': 'application/json', 'Accept': 'text/javascript'}
+
+        response = requests.post(url_start, data=json.dumps(data), headers=headers)
+
+        if response.status_code == 200:
+            await asyncio.sleep(20)
+            await ctx.send('Successfully started spooling up the Enshrouded server!')
+        else:
+            await ctx.send(f'Failed to start the server. HTTP status code: {response.status_code}')
+
+
+@enshrouded.command(name='stop', help="Sends a stop signal to the Enshrouded game server.")
+async def enshrouded_stop(ctx):
+    async with ctx.typing():
+        await login()
+
+        data = {
+            "InstanceName": "Enshrouded01",
+            "SESSIONID": token
+        }
+
+        headers = {'Content-type': 'application/json', 'Accept': 'text/javascript'}
+
+        response = requests.post(url_stop, data=json.dumps(data), headers=headers)
+
+        if response.status_code == 200:
+            await ctx.send('Successfully sent a stop signal to the server! Give it time to stop completely.')
+        else:
+            await ctx.send(f'Failed to stop the server. HTTP status code: {response.status_code}')
+
+
+@enshrouded.command(name='restart', help="Sends a restart signal to the Enshrouded game server, may take awhile.")
+async def enshrouded_restart(ctx):
+    async with ctx.typing():
+        await login()
+
+        data = {
+            "InstanceName": "Enshrouded01",
             "SESSIONID": token
         }
 
