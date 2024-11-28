@@ -1110,7 +1110,7 @@ async def sotf(ctx):
             embed = discord.Embed(title="Sons Of The Forest Bot Commands", description="These are the available commands",
                                   color=discord.Color.blue())
 
-            for command in beamng.commands:
+            for command in sotf.commands:
                 embed.add_field(name=command.name, value=command.help, inline=False)
 
             await ctx.send(embed=embed)
@@ -1216,7 +1216,7 @@ async def enshrouded(ctx):
             embed = discord.Embed(title="Enshrouded Commands", description="These are the available commands",
                                   color=discord.Color.blue())
 
-            for command in beamng.commands:
+            for command in enshrouded.commands:
                 embed.add_field(name=command.name, value=command.help, inline=False)
 
             await ctx.send(embed=embed)
@@ -1300,6 +1300,110 @@ async def enshrouded_restart(ctx):
 
         data = {
             "InstanceName": "Enshrouded01",
+            "SESSIONID": token
+        }
+
+        headers = {'Content-type': 'application/json', 'Accept': 'text/javascript'}
+
+        response = requests.post(url_restart, data=json.dumps(data), headers=headers)
+
+        if response.status_code == 200:
+            await ctx.send('Successfully sent a restart signal to the server! This will take awhile and may fail...')
+        else:
+            await ctx.send(f'Failed to restart the server. HTTP status code: {response.status_code}')
+
+@bot.group(help="Palworld commands to start, stop, restart, and get info on the server")
+async def palworld(ctx):
+    if ctx.invoked_subcommand is None:
+        async with ctx.typing():
+            await login()
+            embed = discord.Embed(title="Palworld Commands", description="These are the available commands",
+                                  color=discord.Color.blue())
+
+            for command in palworld.commands:
+                embed.add_field(name=command.name, value=command.help, inline=False)
+
+            await ctx.send(embed=embed)
+
+
+@palworld.command(name='info', help="Displays the server info for Palworld game server.")
+async def palworld_info(ctx):
+    async with ctx.typing():
+        await login()
+        data = {
+            "InstanceId": palworld_instance_id,
+            "SESSIONID": token
+        }
+        headers = {'Content-type': 'application/json', 'Accept': 'text/javascript'}
+        response = requests.post(url_Get_Instance, data=json.dumps(data), headers=headers)
+
+        if response.status_code == 200:
+            response_content = response.content.decode()
+            json_response = json.loads(response_content)
+            running_status = json_response.get("Running")
+
+            # alternative check for 'Running'
+            # running_status = json_response["Running"] if "Running" in json_response else None
+
+            embed = discord.Embed(title='Palworld Details', color=discord.Color.blue())
+            embed.add_field(name='Server IP', value='67.4.161.61', inline=False)
+            embed.add_field(name='Server Port', value='8211', inline=False)
+            embed.add_field(name='Server Status',
+                            value=f'The Palworld server is currently {"running" if running_status else "not running"}.',
+                            inline=False)
+
+            await ctx.send(embed=embed)
+        else:
+            await ctx.send(f'Failed to get server info. HTTP status code: {response.status_code}')
+
+
+@palworld.command(name='start', help="Starts the spooling up process for Palworld.")
+async def palworld_start(ctx):
+    async with ctx.typing():
+        await login()
+
+        data = {
+            "InstanceName": "Palworld01",
+            "SESSIONID": token
+        }
+        headers = {'Content-type': 'application/json', 'Accept': 'text/javascript'}
+
+        response = requests.post(url_start, data=json.dumps(data), headers=headers)
+
+        if response.status_code == 200:
+            await asyncio.sleep(20)
+            await ctx.send('Successfully started spooling up the Palworld server!')
+        else:
+            await ctx.send(f'Failed to start the server. HTTP status code: {response.status_code}')
+
+
+@palworld.command(name='stop', help="Sends a stop signal to the Palworld game server.")
+async def palworld_stop(ctx):
+    async with ctx.typing():
+        await login()
+
+        data = {
+            "InstanceName": "Palworld01",
+            "SESSIONID": token
+        }
+
+        headers = {'Content-type': 'application/json', 'Accept': 'text/javascript'}
+
+        response = requests.post(url_stop, data=json.dumps(data), headers=headers)
+
+        if response.status_code == 200:
+            await ctx.send('Successfully sent a stop signal to the server! Give it time to stop completely.')
+        else:
+            await ctx.send(f'Failed to stop the server. HTTP status code: {response.status_code}')
+
+
+@palworld.command(name='restart', help="Sends a restart signal to the Palworld game server, may take awhile.")
+async def palworld_restart(ctx):
+    async with ctx.typing():
+        await login()
+
+        data = {
+            "InstanceName": "Palworld01",
             "SESSIONID": token
         }
 
