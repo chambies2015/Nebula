@@ -42,6 +42,7 @@ projectzomboid_instance_id = "1c89f2a2-2586-46d2-945b-301cad9b6e08"
 beamng_instance_id = "56309d72-174f-4fd6-bd29-75cdd0e3ef4e"
 sotf_instance_id = "6c7417c4-34d0-45d0-abc1-37ce4ad43009"
 enshrouded_instance_id = "d8019f76-cd48-4781-9b84-12506b14022c"
+palworld_instance_id = "7e948276-2b9a-44fc-a40a-88db2e3d25b0"
 
 global token
 token = None
