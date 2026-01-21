@@ -3,7 +3,7 @@ import discord
 from discord.ext import commands
 from config import GAME_CONFIGS
 from amp_client import login, get_instance_status, build_info_embed, start_instance, stop_instance, restart_instance
-from batch_server import start_batch_server, stop_batch_server, is_server_running
+from batch_server import start_batch_server, stop_batch_server, is_server_running, force_kill_all_processes
 
 
 @commands.group(help=GAME_CONFIGS["ark"]["group_help"])
@@ -807,3 +807,14 @@ async def atm10_restart(ctx):
             await ctx.send(GAME_CONFIGS["atm10"]["restart"]["success_msg"])
         else:
             await ctx.send(f'Failed to restart the server: {message_start}')
+
+
+@atm10.command(name='forcekill', help="Forcefully kills all Java and cmd.exe processes related to the server.")
+async def atm10_forcekill(ctx):
+    async with ctx.typing():
+        success, message = await force_kill_all_processes("atm10")
+        
+        if success:
+            await ctx.send(f'✅ {message}')
+        else:
+            await ctx.send(f'❌ {message}')

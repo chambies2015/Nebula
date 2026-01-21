@@ -277,6 +277,98 @@ async def stop_batch_server(server_name):
         return False, f"Failed to stop server: {str(e)}"
 
 
+async def force_kill_all_processes(server_name):
+    print(f"[{server_name}] FORCE KILL: Attempting to kill all related processes...")
+    
+    if os.name == 'nt':
+        try:
+            import psutil
+            
+            def find_all_processes():
+                java_processes = []
+                cmd_processes = []
+                
+                for p in psutil.process_iter(['pid', 'name', 'cmdline', 'ppid']):
+                    try:
+                        if p.info['name']:
+                            name_lower = p.info['name'].lower()
+                            cmdline = p.info['cmdline'] or []
+                            cmdline_str = ' '.join(str(arg) for arg in cmdline).lower()
+                            
+                            if 'java.exe' in name_lower:
+                                if any('minecraft' in str(arg).lower() or 'server' in str(arg).lower() or 'forge' in str(arg).lower() for arg in cmdline):
+                                    java_processes.append(p)
+                            
+                            if 'cmd.exe' in name_lower:
+                                if any('atm10' in cmdline_str or 'minecraft' in cmdline_str or server_name in cmdline_str for arg in cmdline if arg):
+                                    cmd_processes.append(p)
+                    except (psutil.NoSuchProcess, psutil.AccessDenied):
+                        continue
+                
+                return java_processes, cmd_processes
+            
+            loop = asyncio.get_event_loop()
+            java_processes, cmd_processes = await loop.run_in_executor(executor, find_all_processes)
+            
+            killed_count = 0
+            
+            for java_proc in java_processes:
+                try:
+                    print(f"[{server_name}] FORCE KILL: Killing Java process PID {java_proc.pid}...")
+                    def kill_java():
+                        java_proc.kill()
+                    
+                    await loop.run_in_executor(executor, kill_java)
+                    await asyncio.sleep(0.5)
+                    
+                    def check_java():
+                        return java_proc.is_running()
+                    
+                    if not await loop.run_in_executor(executor, check_java):
+                        print(f"[{server_name}] FORCE KILL: Successfully killed Java process PID {java_proc.pid}")
+                        killed_count += 1
+                    else:
+                        print(f"[{server_name}] FORCE KILL: WARNING - Java process PID {java_proc.pid} still running")
+                except (psutil.NoSuchProcess, psutil.AccessDenied) as e:
+                    print(f"[{server_name}] FORCE KILL: Error killing Java process: {e}")
+            
+            for cmd_proc in cmd_processes:
+                try:
+                    print(f"[{server_name}] FORCE KILL: Killing cmd.exe process PID {cmd_proc.pid}...")
+                    def kill_cmd():
+                        cmd_proc.kill()
+                    
+                    await loop.run_in_executor(executor, kill_cmd)
+                    await asyncio.sleep(0.5)
+                    
+                    def check_cmd():
+                        return cmd_proc.is_running()
+                    
+                    if not await loop.run_in_executor(executor, check_cmd):
+                        print(f"[{server_name}] FORCE KILL: Successfully killed cmd.exe process PID {cmd_proc.pid}")
+                        killed_count += 1
+                    else:
+                        print(f"[{server_name}] FORCE KILL: WARNING - cmd.exe process PID {cmd_proc.pid} still running")
+                except (psutil.NoSuchProcess, psutil.AccessDenied) as e:
+                    print(f"[{server_name}] FORCE KILL: Error killing cmd.exe process: {e}")
+            
+            if server_name in processes:
+                processes[server_name] = None
+            
+            print(f"[{server_name}] FORCE KILL: Completed. Killed {killed_count} process(es)")
+            return True, f"Force killed {killed_count} process(es)"
+            
+        except ImportError:
+            return False, "psutil not available for force kill"
+        except Exception as e:
+            print(f"[{server_name}] FORCE KILL: Exception: {e}")
+            import traceback
+            traceback.print_exc()
+            return False, f"Error during force kill: {str(e)}"
+    else:
+        return False, "Force kill only available on Windows"
+
+
 def is_server_running(server_name):
     if server_name not in processes or processes[server_name] is None:
         return False
