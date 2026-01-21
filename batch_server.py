@@ -17,6 +17,27 @@ async def start_batch_server(server_name, batch_script_path):
             return False, "Server is already running"
     
     try:
+        if os.name == 'nt':
+            print(f"[{server_name}] Checking for existing Java/Minecraft processes...")
+            try:
+                import psutil
+                java_processes = []
+                for p in psutil.process_iter(['pid', 'name', 'cmdline']):
+                    try:
+                        if p.info['name'] and 'java.exe' in p.info['name'].lower():
+                            cmdline = p.info['cmdline']
+                            if cmdline and any('minecraft' in str(arg).lower() or 'server' in str(arg).lower() or 'forge' in str(arg).lower() for arg in cmdline):
+                                java_processes.append(p)
+                                print(f"[{server_name}] WARNING: Found existing Java/Minecraft process (PID: {p.pid})")
+                    except (psutil.NoSuchProcess, psutil.AccessDenied):
+                        continue
+                
+                if java_processes:
+                    print(f"[{server_name}] ERROR: Found {len(java_processes)} existing Java/Minecraft process(es). Please stop the server first or wait for processes to fully terminate.")
+                    return False, f"Found {len(java_processes)} existing Java/Minecraft process(es). Server may still be shutting down."
+            except ImportError:
+                print(f"[{server_name}] psutil not available, skipping Java process check")
+        
         if not os.path.exists(batch_script_path):
             print(f"[{server_name}] ERROR: Batch script not found at: {batch_script_path}")
             return False, f"Batch script not found: {batch_script_path}"
@@ -86,27 +107,35 @@ async def stop_batch_server(server_name):
                         continue
                 
                 if java_processes:
-                    java_proc = java_processes[0]
-                    print(f"[{server_name}] Stopping Java process (PID: {java_proc.pid})...")
-                    try:
-                        java_proc.send_signal(psutil.signal.SIGTERM)
-                        print(f"[{server_name}] Sent SIGTERM to Java process, waiting 6 seconds...")
-                        await asyncio.sleep(6)
-                        
-                        if java_proc.is_running():
-                            print(f"[{server_name}] Java process still running, sending SIGINT...")
-                            java_proc.send_signal(psutil.signal.SIGINT)
-                            await asyncio.sleep(0.5)
+                    for java_proc in java_processes:
+                        print(f"[{server_name}] Stopping Java process (PID: {java_proc.pid})...")
+                        try:
+                            java_proc.send_signal(psutil.signal.SIGTERM)
+                            print(f"[{server_name}] Sent SIGTERM to Java process (PID: {java_proc.pid}), waiting 6 seconds...")
+                            await asyncio.sleep(6)
                             
                             if java_proc.is_running():
-                                print(f"[{server_name}] Java process still running, force killing...")
-                                java_proc.kill()
+                                print(f"[{server_name}] Java process (PID: {java_proc.pid}) still running, sending SIGINT...")
+                                java_proc.send_signal(psutil.signal.SIGINT)
+                                await asyncio.sleep(2)
+                                
+                                if java_proc.is_running():
+                                    print(f"[{server_name}] Java process (PID: {java_proc.pid}) still running, force killing...")
+                                    java_proc.kill()
+                                    await asyncio.sleep(1)
+                                    
+                                    if java_proc.is_running():
+                                        print(f"[{server_name}] WARNING: Java process (PID: {java_proc.pid}) still running after kill attempt")
+                                    else:
+                                        print(f"[{server_name}] Java process (PID: {java_proc.pid}) killed successfully")
+                                else:
+                                    print(f"[{server_name}] Java process (PID: {java_proc.pid}) stopped after SIGINT")
                             else:
-                                print(f"[{server_name}] Java process stopped successfully")
-                        else:
-                            print(f"[{server_name}] Java process stopped after SIGTERM")
-                    except (psutil.NoSuchProcess, psutil.AccessDenied) as e:
-                        print(f"[{server_name}] Error stopping Java process: {e}")
+                                print(f"[{server_name}] Java process (PID: {java_proc.pid}) stopped after SIGTERM")
+                            
+                            await asyncio.sleep(2)
+                        except (psutil.NoSuchProcess, psutil.AccessDenied) as e:
+                            print(f"[{server_name}] Error stopping Java process (PID: {java_proc.pid}): {e}")
                 else:
                     print(f"[{server_name}] No Java/Minecraft server process found")
             except ImportError:
@@ -115,19 +144,34 @@ async def stop_batch_server(server_name):
             print(f"[{server_name}] Stopping cmd.exe process (PID: {proc.pid})...")
             try:
                 proc.send_signal(signal.CTRL_C_EVENT)
-                print(f"[{server_name}] Sent CTRL+C to cmd process, waiting 0.5 seconds...")
-                await asyncio.sleep(0.5)
+                print(f"[{server_name}] Sent CTRL+C to cmd process, waiting 1 second...")
+                await asyncio.sleep(1)
             except Exception as e:
                 print(f"[{server_name}] Could not send CTRL+C: {e}")
             
             print(f"[{server_name}] Terminating cmd process...")
             proc.terminate()
-            await asyncio.sleep(1)
+            
+            max_wait = 5
+            waited = 0
+            while proc.poll() is None and waited < max_wait:
+                await asyncio.sleep(0.5)
+                waited += 0.5
+                print(f"[{server_name}] Waiting for process to terminate... ({waited:.1f}s)")
+            
             if proc.poll() is None:
-                print(f"[{server_name}] Process still running, force killing...")
+                print(f"[{server_name}] Process still running after {max_wait}s, force killing...")
                 proc.kill()
+                await asyncio.sleep(1)
+                if proc.poll() is None:
+                    print(f"[{server_name}] WARNING: Process still running after kill attempt")
+                else:
+                    print(f"[{server_name}] Process killed successfully (exit code: {proc.poll()})")
             else:
                 print(f"[{server_name}] Process terminated successfully (exit code: {proc.poll()})")
+            
+            await asyncio.sleep(2)
+            print(f"[{server_name}] Waiting additional 2 seconds for file locks to release...")
         else:
             if proc.stdin:
                 proc.stdin.write(b"stop\r\n")
