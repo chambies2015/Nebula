@@ -1,19 +1,42 @@
 import asyncio
 import json
 import aiohttp
-import requests
+import time
 import tokens
 from ampapi.ampapi import AMPAPI
 import discord
 from config import AMP_BASE_URL, URL_LOGIN, URL_GET_INSTANCE, URL_START, URL_STOP, URL_RESTART
+from typing import Optional, Tuple
+from logger import setup_logger
+
+logger = setup_logger("amp_client")
 
 API = AMPAPI(AMP_BASE_URL)
 
-token = None
+token: Optional[str] = None
+token_expiry: float = 0
+SESSION_TIMEOUT = 30 * 60
+_session: Optional[aiohttp.ClientSession] = None
 
 
-async def login():
-    global token
+async def get_session() -> aiohttp.ClientSession:
+    global _session
+    if _session is None or _session.closed:
+        _session = aiohttp.ClientSession()
+    return _session
+
+
+async def ensure_authenticated() -> bool:
+    global token, token_expiry
+    current_time = time.time()
+    
+    if token is None or current_time >= token_expiry:
+        return await login()
+    return True
+
+
+async def login() -> bool:
+    global token, token_expiry
     login_data = {
         "username": tokens.username,
         "password": tokens.password,
@@ -21,48 +44,67 @@ async def login():
         "rememberMe": "true"
     }
 
-    async with aiohttp.ClientSession() as session:
-        headers = {'Accept': 'application/json'}
+    session = await get_session()
+    headers = {'Accept': 'application/json'}
+    
+    try:
         async with session.post(URL_LOGIN, json=login_data, headers=headers) as resp:
-
-            if resp.headers['Content-Type'] == 'application/json':
+            if resp.headers.get('Content-Type', '').startswith('application/json'):
                 loginResult = await resp.json()
 
                 if "success" in loginResult.keys() and loginResult["success"]:
-                    print("Login successful")
+                    logger.info("Login successful")
                     API.sessionId = loginResult["sessionID"]
                     token = loginResult['sessionID']
-                    currentStatus = await API.Core_GetStatusAsync()
-                    CPUUsagePercent = currentStatus["Metrics"]["CPU Usage"]["Percent"]
-                    print(f"Current CPU usage is: {CPUUsagePercent}%")
-
+                    token_expiry = time.time() + SESSION_TIMEOUT
+                    
+                    try:
+                        currentStatus = await API.Core_GetStatusAsync()
+                        CPUUsagePercent = currentStatus["Metrics"]["CPU Usage"]["Percent"]
+                        logger.info(f"Current CPU usage is: {CPUUsagePercent}%")
+                    except Exception as e:
+                        logger.warning(f"Failed to get CPU usage: {e}")
+                    
+                    return True
                 else:
-                    print("Login failed")
-                    print(loginResult)
-
+                    logger.error(f"Login failed: {loginResult}")
+                    return False
             else:
-                print(f"Unexpected content type: {resp.headers['Content-Type']}")
-                print(await resp.text())
+                content_type = resp.headers.get('Content-Type', 'unknown')
+                logger.error(f"Unexpected content type: {content_type}")
+                text = await resp.text()
+                logger.error(f"Response text: {text}")
+                return False
+    except Exception as e:
+        logger.error(f"Login error: {e}", exc_info=True)
+        return False
 
 
-async def get_instance_status(instance_id):
-    await login()
+async def get_instance_status(instance_id: str) -> Tuple[Optional[bool], int]:
+    if not await ensure_authenticated():
+        return None, 401
+    
     data = {
         "InstanceId": instance_id,
         "SESSIONID": token
     }
     headers = {'Content-type': 'application/json', 'Accept': 'text/javascript'}
-    response = requests.post(URL_GET_INSTANCE, data=json.dumps(data), headers=headers)
+    
+    session = await get_session()
+    try:
+        async with session.post(URL_GET_INSTANCE, data=json.dumps(data), headers=headers) as resp:
+            if resp.status == 200:
+                response_content = await resp.text()
+                json_response = json.loads(response_content)
+                running_status = json_response.get("Running")
+                return running_status, resp.status
+            return None, resp.status
+    except Exception as e:
+        logger.error(f"Error getting instance status: {e}", exc_info=True)
+        return None, 500
 
-    if response.status_code == 200:
-        response_content = response.content.decode()
-        json_response = json.loads(response_content)
-        running_status = json_response.get("Running")
-        return running_status, response.status_code
-    return None, response.status_code
 
-
-def build_info_embed(game_config, running_status):
+def build_info_embed(game_config: dict, running_status: bool) -> discord.Embed:
     info_config = game_config["info"]
     embed = discord.Embed(title=info_config["embed_title"], color=discord.Color.blue())
     
@@ -89,34 +131,58 @@ def build_info_embed(game_config, running_status):
     return embed
 
 
-async def start_instance(instance_name):
-    await login()
+async def start_instance(instance_name: str) -> Tuple[bool, int]:
+    if not await ensure_authenticated():
+        return False, 401
+    
     data = {
         "InstanceName": instance_name,
         "SESSIONID": token
     }
     headers = {'Content-type': 'application/json', 'Accept': 'text/javascript'}
-    response = requests.post(URL_START, data=json.dumps(data), headers=headers)
-    return response.status_code == 200, response.status_code
+    
+    session = await get_session()
+    try:
+        async with session.post(URL_START, data=json.dumps(data), headers=headers) as resp:
+            return resp.status == 200, resp.status
+    except Exception as e:
+        logger.error(f"Error starting instance: {e}", exc_info=True)
+        return False, 500
 
 
-async def stop_instance(instance_name):
-    await login()
+async def stop_instance(instance_name: str) -> Tuple[bool, int]:
+    if not await ensure_authenticated():
+        return False, 401
+    
     data = {
         "InstanceName": instance_name,
         "SESSIONID": token
     }
     headers = {'Content-type': 'application/json', 'Accept': 'text/javascript'}
-    response = requests.post(URL_STOP, data=json.dumps(data), headers=headers)
-    return response.status_code == 200, response.status_code
+    
+    session = await get_session()
+    try:
+        async with session.post(URL_STOP, data=json.dumps(data), headers=headers) as resp:
+            return resp.status == 200, resp.status
+    except Exception as e:
+        logger.error(f"Error stopping instance: {e}", exc_info=True)
+        return False, 500
 
 
-async def restart_instance(instance_name):
-    await login()
+async def restart_instance(instance_name: str) -> Tuple[bool, int]:
+    if not await ensure_authenticated():
+        return False, 401
+    
     data = {
         "InstanceName": instance_name,
         "SESSIONID": token
     }
     headers = {'Content-type': 'application/json', 'Accept': 'text/javascript'}
-    response = requests.post(URL_RESTART, data=json.dumps(data), headers=headers)
-    return response.status_code == 200, response.status_code
+    
+    session = await get_session()
+    try:
+        async with session.post(URL_RESTART, data=json.dumps(data), headers=headers) as resp:
+            return resp.status == 200, resp.status
+    except Exception as e:
+        logger.error(f"Error restarting instance: {e}", exc_info=True)
+        return False, 500

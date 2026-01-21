@@ -1,4 +1,10 @@
+from sensitive import SERVER_IPS, SERVER_PASSWORDS
+
 ALLOWED_CHANNELS = ["1014955844913332334", "939660290172268583", "809544965386272790"]
+
+START_DELAY_SECONDS = 20
+COMMAND_COOLDOWN_RATE = 3
+COMMAND_COOLDOWN_PER = 60
 
 AMP_BASE_URL = "http://localhost:8080/"
 AMP_API_BASE = f"{AMP_BASE_URL}API"
@@ -20,10 +26,10 @@ GAME_CONFIGS = {
         "info": {
             "help": "Displays the server info for Ark Survival Evolved game server.",
             "embed_title": "ARK Survival Evolved Server Details",
-            "ip": "67.4.158.45",
+            "ip": SERVER_IPS["ark"],
             "port": "7777",
             "name": "Chambies Private Server",
-            "password": "thebois",
+            "password": SERVER_PASSWORDS["ark"],
             "status_template": 'The Ark server is currently {"running" if running_status else "not running"}.'
         },
         "start": {
@@ -47,9 +53,9 @@ GAME_CONFIGS = {
         "info": {
             "help": "Displays the server info for the Terraria game server.",
             "embed_title": "Terraria Server Details",
-            "ip": "67.4.158.45",
+            "ip": SERVER_IPS["terraria"],
             "port": "7779",
-            "password": "thebois",
+            "password": SERVER_PASSWORDS["terraria"],
             "mod_list": """
             Boss Checklist v1.4.0
             Calamity Mod v2.0.2.3
@@ -110,10 +116,10 @@ GAME_CONFIGS = {
         "info": {
             "help": "Displays the server info for the Icarus game server.",
             "embed_title": "Icarus Server Details",
-            "ip": "67.4.158.45",
+            "ip": SERVER_IPS["icarus"],
             "port": "19132",
             "name": "chambies private server",
-            "password": "thebois",
+            "password": SERVER_PASSWORDS["icarus"],
             "status_template": 'The Icarus server is currently {"running" if running_status else "not running or unable to get status"}.'
         },
         "start": {
@@ -163,7 +169,7 @@ GAME_CONFIGS = {
         "info": {
             "help": "Displays the server info for Satisfactory game server.",
             "embed_title": "Satisfactory Server Details (NOT EXPERIMENTAL)",
-            "ip": "67.4.158.45",
+            "ip": SERVER_IPS["satisfactory"],
             "port": "7780",
             "status_template": 'The Satisfactory server is currently {"running" if running_status else "not running"}.'
         },
@@ -215,10 +221,10 @@ GAME_CONFIGS = {
         "info": {
             "help": "Displays the server info for Project Zomboid game server.",
             "embed_title": "Project Zomboid Server Details",
-            "ip": "67.4.158.45",
+            "ip": SERVER_IPS["projectzomboid"],
             "port": "19133",
             "name": "The Bois Server",
-            "password": "cumbo",
+            "password": SERVER_PASSWORDS["projectzomboid"],
             "status_template": 'The Project Zomboid server is currently {"running" if running_status else "not running"}.'
         },
         "start": {
@@ -267,7 +273,7 @@ GAME_CONFIGS = {
         "info": {
             "help": "Displays the server info for Sons Of The Forest game server.",
             "embed_title": "Sons Of The Forest Server Details",
-            "ip": "67.4.161.61",
+            "ip": SERVER_IPS["sotf"],
             "port": "37766",
             "status_template": 'The Sons Of The Forest server is currently {"running" if running_status else "not running"}.'
         },
@@ -317,9 +323,9 @@ GAME_CONFIGS = {
         "info": {
             "help": "Displays the server info for Palworld game server.",
             "embed_title": "Palworld Details",
-            "ip": "67.4.161.61",
+            "ip": SERVER_IPS["palworld"],
             "port": "8211",
-            "password": "beans",
+            "password": SERVER_PASSWORDS["palworld"],
             "status_template": 'The Palworld server is currently {"running" if running_status else "not running"}.'
         },
         "start": {
@@ -342,7 +348,7 @@ GAME_CONFIGS = {
         "info": {
             "help": "Displays the server info for the ATM10 Minecraft server.",
             "embed_title": "ATM10 Server Details",
-            "ip": "67.4.161.61",
+            "ip": SERVER_IPS["atm10"],
             "port": "25566",
             "status_template": 'The ATM10 server is currently {"running" if running_status else "not running"}.'
         },

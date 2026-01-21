@@ -1,12 +1,14 @@
 import discord
 from discord.ext import commands
-from discord.ext.commands import check
+from discord.ext.commands import check, CommandOnCooldown, MissingPermissions, CheckFailure
 import tokens
-import aiohttp
-from ampapi.ampapi import AMPAPI
-from config import ALLOWED_CHANNELS, AMP_BASE_URL, URL_LOGIN
-from amp_client import API
+from config import ALLOWED_CHANNELS
+from amp_client import API, login
 import commands as game_commands
+from exceptions import AMPAPIError, AuthenticationError
+from logger import setup_logger
+
+logger = setup_logger("main")
 
 bot_token = tokens.bot_token
 intents = discord.Intents.all()
@@ -37,38 +39,11 @@ bot.add_check(check(is_allowed_channel))
 
 @bot.event
 async def on_ready():
-    print(f'{bot.user} has connected to Discord!')
-
-    login_data = {
-        "username": tokens.username,
-        "password": tokens.password,
-        "token": "",
-        "rememberMe": "true"
-    }
-
-    async with aiohttp.ClientSession() as session:
-        headers = {'Accept': 'application/json'}
-        async with session.post(URL_LOGIN, json=login_data, headers=headers) as resp:
-
-            if resp.headers['Content-Type'] == 'application/json':
-                loginResult = await resp.json()
-
-                if "success" in loginResult.keys() and loginResult["success"]:
-                    print("Login successful")
-                    API.sessionId = loginResult["sessionID"]
-                    import amp_client
-                    amp_client.token = loginResult['sessionID']
-                    currentStatus = await API.Core_GetStatusAsync()
-                    CPUUsagePercent = currentStatus["Metrics"]["CPU Usage"]["Percent"]
-                    print(f"Current CPU usage is: {CPUUsagePercent}%")
-
-                else:
-                    print("Login failed")
-                    print(loginResult)
-
-            else:
-                print(f"Unexpected content type: {resp.headers['Content-Type']}")
-                print(await resp.text())
+    logger.info(f'{bot.user} has connected to Discord!')
+    
+    success = await login()
+    if not success:
+        logger.warning("Initial login failed. Bot may not function correctly.")
 
 
 bot.add_command(game_commands.ark)
@@ -86,14 +61,55 @@ bot.add_command(game_commands.palworld)
 bot.add_command(game_commands.atm10)
 
 
-@bot.command(help="displays helpful commands.")
+@bot.event
+async def on_command_error(ctx, error):
+    if isinstance(error, CommandOnCooldown):
+        await ctx.send(f'⏳ This command is on cooldown. Try again in {error.retry_after:.1f} seconds.')
+    elif isinstance(error, MissingPermissions):
+        await ctx.send('❌ You do not have permission to use this command.')
+    elif isinstance(error, CheckFailure):
+        await ctx.send('❌ This command cannot be used in this channel.')
+    elif isinstance(error, AMPAPIError):
+        await ctx.send(f'❌ API Error: {str(error)}')
+    elif isinstance(error, commands.CommandNotFound):
+        pass
+    else:
+        logger.error(f"Unhandled error in command {ctx.command}: {error}", exc_info=True)
+        await ctx.send('❌ An unexpected error occurred. Please try again later.')
+
+
+@bot.command(help="displays helpful commands.", aliases=['h', 'commands'])
 async def help(ctx):
-    embed = discord.Embed(title="Bot Commands", description="These are the available commands",
-                          color=discord.Color.blue())
-
+    embed = discord.Embed(
+        title="Bot Commands",
+        description="Use `$<game> <command>` to control servers. Aliases: `s`=start, `st`=stop, `r`=restart",
+        color=discord.Color.blue()
+    )
+    
+    game_groups = {}
+    other_commands = []
+    
     for command in bot.commands:
-        embed.add_field(name=command.name, value=command.help, inline=False)
-
+        if isinstance(command, commands.Group):
+            game_groups[command.name] = command
+        else:
+            other_commands.append(command)
+    
+    if game_groups:
+        games_text = ", ".join(sorted(game_groups.keys()))
+        embed.add_field(name="Available Games", value=games_text, inline=False)
+        embed.add_field(
+            name="Game Commands",
+            value="Each game supports: `info`, `start` (alias: `s`), `stop` (alias: `st`), `restart` (alias: `r`)",
+            inline=False
+        )
+    
+    if other_commands:
+        for cmd in other_commands:
+            aliases_text = f" (aliases: {', '.join(cmd.aliases)})" if cmd.aliases else ""
+            embed.add_field(name=f"${cmd.name}{aliases_text}", value=cmd.help or "No description", inline=False)
+    
+    embed.set_footer(text="Commands have a 3 uses per 60 seconds cooldown per user")
     await ctx.send(embed=embed)
 
 

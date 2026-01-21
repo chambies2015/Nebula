@@ -1,9 +1,12 @@
 import asyncio
 import discord
 from discord.ext import commands
-from config import GAME_CONFIGS
+from typing import Optional
+from config import GAME_CONFIGS, START_DELAY_SECONDS, COMMAND_COOLDOWN_RATE, COMMAND_COOLDOWN_PER
 from amp_client import login, get_instance_status, build_info_embed, start_instance, stop_instance, restart_instance
 from batch_server import start_batch_server, stop_batch_server, is_server_running, force_kill_all_processes
+
+
 
 
 @commands.group(help=GAME_CONFIGS["ark"]["group_help"])
@@ -32,19 +35,21 @@ async def ark_info(ctx):
             await ctx.send(f'Failed to get server info. HTTP status code: {status_code}')
 
 
-@ark.command(name='start', help=GAME_CONFIGS["ark"]["start"]["help"])
+@ark.command(name='start', help=GAME_CONFIGS["ark"]["start"]["help"], aliases=['s'])
+@commands.cooldown(COMMAND_COOLDOWN_RATE, COMMAND_COOLDOWN_PER, commands.BucketType.user)
 async def ark_start(ctx):
     async with ctx.typing():
         success, status_code = await start_instance(GAME_CONFIGS["ark"]["instance_name"])
 
         if success:
-            await asyncio.sleep(20)
+            await asyncio.sleep(START_DELAY_SECONDS)
             await ctx.send(GAME_CONFIGS["ark"]["start"]["success_msg"])
         else:
             await ctx.send(f'Failed to start the server. HTTP status code: {status_code}')
 
 
-@ark.command(name='stop', help=GAME_CONFIGS["ark"]["stop"]["help"])
+@ark.command(name='stop', help=GAME_CONFIGS["ark"]["stop"]["help"], aliases=['st'])
+@commands.cooldown(COMMAND_COOLDOWN_RATE, COMMAND_COOLDOWN_PER, commands.BucketType.user)
 async def ark_stop(ctx):
     async with ctx.typing():
         success, status_code = await stop_instance(GAME_CONFIGS["ark"]["instance_name"])
@@ -55,7 +60,8 @@ async def ark_stop(ctx):
             await ctx.send(f'Failed to stop the server. HTTP status code: {status_code}')
 
 
-@ark.command(name='restart', help=GAME_CONFIGS["ark"]["restart"]["help"])
+@ark.command(name='restart', help=GAME_CONFIGS["ark"]["restart"]["help"], aliases=['r'])
+@commands.cooldown(COMMAND_COOLDOWN_RATE, COMMAND_COOLDOWN_PER, commands.BucketType.user)
 async def ark_restart(ctx):
     async with ctx.typing():
         success, status_code = await restart_instance(GAME_CONFIGS["ark"]["instance_name"])
@@ -63,7 +69,7 @@ async def ark_restart(ctx):
         if success:
             await ctx.send(GAME_CONFIGS["ark"]["restart"]["success_msg"])
         else:
-            await ctx.send(f'Failed to stop the server. HTTP status code: {status_code}')
+            await ctx.send(f'Failed to restart the server. HTTP status code: {status_code}')
 
 
 @commands.group(help=GAME_CONFIGS["terraria"]["group_help"])
@@ -92,7 +98,8 @@ async def terraria_info(ctx):
             await ctx.send(f'Failed to get server info. HTTP status code: {status_code}')
 
 
-@terraria.command(name='start', help=GAME_CONFIGS["terraria"]["start"]["help"])
+@terraria.command(name='start', help=GAME_CONFIGS["terraria"]["start"]["help"], aliases=['s'])
+@commands.cooldown(COMMAND_COOLDOWN_RATE, COMMAND_COOLDOWN_PER, commands.BucketType.user)
 async def terraria_start(ctx):
     async with ctx.typing():
         success, status_code = await start_instance(GAME_CONFIGS["terraria"]["instance_name"])
@@ -107,7 +114,7 @@ async def terraria_start(ctx):
 @terraria.command(name='stop', help=GAME_CONFIGS["terraria"]["stop"]["help"])
 async def terraria_stop(ctx):
     async with ctx.typing():
-        success = await stop_instance(GAME_CONFIGS["terraria"]["instance_name"])
+        success, status_code = await stop_instance(GAME_CONFIGS["terraria"]["instance_name"])
 
         if success:
             await ctx.send(GAME_CONFIGS["terraria"]["stop"]["success_msg"])
@@ -115,7 +122,8 @@ async def terraria_stop(ctx):
             await ctx.send(f'Failed to stop the server. HTTP status code: {status_code}')
 
 
-@terraria.command(name='restart', help=GAME_CONFIGS["terraria"]["restart"]["help"])
+@terraria.command(name='restart', help=GAME_CONFIGS["terraria"]["restart"]["help"], aliases=['r'])
+@commands.cooldown(COMMAND_COOLDOWN_RATE, COMMAND_COOLDOWN_PER, commands.BucketType.user)
 async def terraria_restart(ctx):
     async with ctx.typing():
         success, status_code = await restart_instance(GAME_CONFIGS["terraria"]["instance_name"])
@@ -123,7 +131,7 @@ async def terraria_restart(ctx):
         if success:
             await ctx.send(GAME_CONFIGS["terraria"]["restart"]["success_msg"])
         else:
-            await ctx.send(f'Failed to stop the server. HTTP status code: {status_code}')
+            await ctx.send(f'Failed to restart the server. HTTP status code: {status_code}')
 
 
 @commands.group(help=GAME_CONFIGS["necesse"]["group_help"])
@@ -149,10 +157,11 @@ async def necesse_info(ctx):
             embed = build_info_embed(GAME_CONFIGS["necesse"], running_status)
             await ctx.send(embed=embed)
         else:
-            await ctx.send(f'Failed to get server info. HTTP status code: 500')
+            await ctx.send(f'Failed to get server info. HTTP status code: {status_code}')
 
 
-@necesse.command(name='start', help=GAME_CONFIGS["necesse"]["start"]["help"])
+@necesse.command(name='start', help=GAME_CONFIGS["necesse"]["start"]["help"], aliases=['s'])
+@commands.cooldown(COMMAND_COOLDOWN_RATE, COMMAND_COOLDOWN_PER, commands.BucketType.user)
 async def necesse_start(ctx):
     async with ctx.typing():
         success, status_code = await start_instance(GAME_CONFIGS["necesse"]["instance_name"])
@@ -167,7 +176,7 @@ async def necesse_start(ctx):
 @necesse.command(name='stop', help=GAME_CONFIGS["necesse"]["stop"]["help"])
 async def necesse_stop(ctx):
     async with ctx.typing():
-        success = await stop_instance(GAME_CONFIGS["necesse"]["instance_name"])
+        success, status_code = await stop_instance(GAME_CONFIGS["necesse"]["instance_name"])
 
         if success:
             await ctx.send(GAME_CONFIGS["necesse"]["stop"]["success_msg"])
@@ -175,7 +184,8 @@ async def necesse_stop(ctx):
             await ctx.send(f'Failed to stop the server. HTTP status code: {status_code}')
 
 
-@necesse.command(name='restart', help=GAME_CONFIGS["necesse"]["restart"]["help"])
+@necesse.command(name='restart', help=GAME_CONFIGS["necesse"]["restart"]["help"], aliases=['r'])
+@commands.cooldown(COMMAND_COOLDOWN_RATE, COMMAND_COOLDOWN_PER, commands.BucketType.user)
 async def necesse_restart(ctx):
     async with ctx.typing():
         success, status_code = await restart_instance(GAME_CONFIGS["necesse"]["instance_name"])
@@ -183,7 +193,7 @@ async def necesse_restart(ctx):
         if success:
             await ctx.send(GAME_CONFIGS["necesse"]["restart"]["success_msg"])
         else:
-            await ctx.send(f'Failed to stop the server. HTTP status code: {status_code}')
+            await ctx.send(f'Failed to restart the server. HTTP status code: {status_code}')
 
 
 @commands.group(help=GAME_CONFIGS["icarus"]["group_help"])
@@ -209,7 +219,7 @@ async def icarus_info(ctx):
             embed = build_info_embed(GAME_CONFIGS["icarus"], running_status)
             await ctx.send(embed=embed)
         else:
-            await ctx.send(f'Failed to get server info. HTTP status code: 500')
+            await ctx.send(f'Failed to get server info. HTTP status code: {status_code}')
 
 
 @icarus.command(name='start', help=GAME_CONFIGS["icarus"]["start"]["help"])
@@ -224,10 +234,11 @@ async def icarus_start(ctx):
             await ctx.send(f'Failed to start the server. HTTP status code: {status_code}')
 
 
-@icarus.command(name='stop', help=GAME_CONFIGS["icarus"]["stop"]["help"])
+@icarus.command(name='stop', help=GAME_CONFIGS["icarus"]["stop"]["help"], aliases=['st'])
+@commands.cooldown(COMMAND_COOLDOWN_RATE, COMMAND_COOLDOWN_PER, commands.BucketType.user)
 async def icarus_stop(ctx):
     async with ctx.typing():
-        success = await stop_instance(GAME_CONFIGS["icarus"]["instance_name"])
+        success, status_code = await stop_instance(GAME_CONFIGS["icarus"]["instance_name"])
 
         if success:
             await ctx.send(GAME_CONFIGS["icarus"]["stop"]["success_msg"])
@@ -243,7 +254,7 @@ async def icarus_restart(ctx):
         if success:
             await ctx.send(GAME_CONFIGS["icarus"]["restart"]["success_msg"])
         else:
-            await ctx.send(f'Failed to stop the server. HTTP status code: {status_code}')
+            await ctx.send(f'Failed to restart the server. HTTP status code: {status_code}')
 
 
 @commands.group(help=GAME_CONFIGS["minecraft"]["group_help"])
@@ -270,10 +281,11 @@ async def minecraft_info(ctx):
             embed = build_info_embed(GAME_CONFIGS["minecraft"], running_status)
             await ctx.send(embed=embed)
         else:
-            await ctx.send(f'Failed to get server info. HTTP status code: 500')
+            await ctx.send(f'Failed to get server info. HTTP status code: {status_code}')
 
 
-@minecraft.command(name='start', help=GAME_CONFIGS["minecraft"]["start"]["help"])
+@minecraft.command(name='start', help=GAME_CONFIGS["minecraft"]["start"]["help"], aliases=['s'])
+@commands.cooldown(COMMAND_COOLDOWN_RATE, COMMAND_COOLDOWN_PER, commands.BucketType.user)
 async def minecraft_start(ctx):
     async with ctx.typing():
         success, status_code = await start_instance(GAME_CONFIGS["minecraft"]["instance_name"])
@@ -285,10 +297,11 @@ async def minecraft_start(ctx):
             await ctx.send(f'Failed to start the server. HTTP status code: {status_code}')
 
 
-@minecraft.command(name='stop', help=GAME_CONFIGS["minecraft"]["stop"]["help"])
+@minecraft.command(name='stop', help=GAME_CONFIGS["minecraft"]["stop"]["help"], aliases=['st'])
+@commands.cooldown(COMMAND_COOLDOWN_RATE, COMMAND_COOLDOWN_PER, commands.BucketType.user)
 async def minecraft_stop(ctx):
     async with ctx.typing():
-        success = await stop_instance(GAME_CONFIGS["minecraft"]["instance_name"])
+        success, status_code = await stop_instance(GAME_CONFIGS["minecraft"]["instance_name"])
 
         if success:
             await ctx.send(GAME_CONFIGS["minecraft"]["stop"]["success_msg"])
@@ -330,10 +343,11 @@ async def satisfactory_info(ctx):
             embed = build_info_embed(GAME_CONFIGS["satisfactory"], running_status)
             await ctx.send(embed=embed)
         else:
-            await ctx.send(f'Failed to get server info. HTTP status code: 500')
+            await ctx.send(f'Failed to get server info. HTTP status code: {status_code}')
 
 
-@satisfactory.command(name='start', help=GAME_CONFIGS["satisfactory"]["start"]["help"])
+@satisfactory.command(name='start', help=GAME_CONFIGS["satisfactory"]["start"]["help"], aliases=['s'])
+@commands.cooldown(COMMAND_COOLDOWN_RATE, COMMAND_COOLDOWN_PER, commands.BucketType.user)
 async def satisfactory_start(ctx):
     async with ctx.typing():
         success, status_code = await start_instance(GAME_CONFIGS["satisfactory"]["instance_name"])
@@ -356,7 +370,8 @@ async def satisfactory_stop(ctx):
             await ctx.send(f'Failed to stop the server. HTTP status code: {status_code}')
 
 
-@satisfactory.command(name='restart', help=GAME_CONFIGS["satisfactory"]["restart"]["help"])
+@satisfactory.command(name='restart', help=GAME_CONFIGS["satisfactory"]["restart"]["help"], aliases=['r'])
+@commands.cooldown(COMMAND_COOLDOWN_RATE, COMMAND_COOLDOWN_PER, commands.BucketType.user)
 async def satisfactory_restart(ctx):
     async with ctx.typing():
         success, status_code = await restart_instance(GAME_CONFIGS["satisfactory"]["instance_name"])
@@ -391,10 +406,11 @@ async def sevendaystodie_info(ctx):
             embed = build_info_embed(GAME_CONFIGS["sevendaystodie"], running_status)
             await ctx.send(embed=embed)
         else:
-            await ctx.send(f'Failed to get server info. HTTP status code: 500')
+            await ctx.send(f'Failed to get server info. HTTP status code: {status_code}')
 
 
-@sevendaystodie.command(name='start', help=GAME_CONFIGS["sevendaystodie"]["start"]["help"])
+@sevendaystodie.command(name='start', help=GAME_CONFIGS["sevendaystodie"]["start"]["help"], aliases=['s'])
+@commands.cooldown(COMMAND_COOLDOWN_RATE, COMMAND_COOLDOWN_PER, commands.BucketType.user)
 async def sevendaystodie_start(ctx):
     async with ctx.typing():
         success, status_code = await start_instance(GAME_CONFIGS["sevendaystodie"]["instance_name"])
@@ -409,7 +425,7 @@ async def sevendaystodie_start(ctx):
 @sevendaystodie.command(name='stop', help=GAME_CONFIGS["sevendaystodie"]["stop"]["help"])
 async def sevendaystodie_stop(ctx):
     async with ctx.typing():
-        success = await stop_instance(GAME_CONFIGS["sevendaystodie"]["instance_name"])
+        success, status_code = await stop_instance(GAME_CONFIGS["sevendaystodie"]["instance_name"])
 
         if success:
             await ctx.send(GAME_CONFIGS["sevendaystodie"]["stop"]["success_msg"])
@@ -417,8 +433,8 @@ async def sevendaystodie_stop(ctx):
             await ctx.send(f'Failed to stop the server. HTTP status code: {status_code}')
 
 
-@sevendaystodie.command(name='restart',
-                        help=GAME_CONFIGS["sevendaystodie"]["restart"]["help"])
+@sevendaystodie.command(name='restart', help=GAME_CONFIGS["sevendaystodie"]["restart"]["help"], aliases=['r'])
+@commands.cooldown(COMMAND_COOLDOWN_RATE, COMMAND_COOLDOWN_PER, commands.BucketType.user)
 async def sevendaystodie_restart(ctx):
     async with ctx.typing():
         success, status_code = await restart_instance(GAME_CONFIGS["sevendaystodie"]["instance_name"])
@@ -453,7 +469,7 @@ async def projectzomboid_info(ctx):
             embed = build_info_embed(GAME_CONFIGS["projectzomboid"], running_status)
             await ctx.send(embed=embed)
         else:
-            await ctx.send(f'Failed to get server info. HTTP status code: 500')
+            await ctx.send(f'Failed to get server info. HTTP status code: {status_code}')
 
 
 @projectzomboid.command(name='start', help=GAME_CONFIGS["projectzomboid"]["start"]["help"])
@@ -468,7 +484,8 @@ async def projectzomboid_start(ctx):
             await ctx.send(f'Failed to start the server. HTTP status code: {status_code}')
 
 
-@projectzomboid.command(name='stop', help=GAME_CONFIGS["projectzomboid"]["stop"]["help"])
+@projectzomboid.command(name='stop', help=GAME_CONFIGS["projectzomboid"]["stop"]["help"], aliases=['st'])
+@commands.cooldown(COMMAND_COOLDOWN_RATE, COMMAND_COOLDOWN_PER, commands.BucketType.user)
 async def projectzomboid_stop(ctx):
     async with ctx.typing():
         success = await stop_instance(GAME_CONFIGS["projectzomboid"]["instance_name"])
@@ -514,10 +531,11 @@ async def beamng_info(ctx):
             embed = build_info_embed(GAME_CONFIGS["beamng"], running_status)
             await ctx.send(embed=embed)
         else:
-            await ctx.send(f'Failed to get server info. HTTP status code: 500')
+            await ctx.send(f'Failed to get server info. HTTP status code: {status_code}')
 
 
-@beamng.command(name='start', help=GAME_CONFIGS["beamng"]["start"]["help"])
+@beamng.command(name='start', help=GAME_CONFIGS["beamng"]["start"]["help"], aliases=['s'])
+@commands.cooldown(COMMAND_COOLDOWN_RATE, COMMAND_COOLDOWN_PER, commands.BucketType.user)
 async def beamng_start(ctx):
     async with ctx.typing():
         success, status_code = await start_instance(GAME_CONFIGS["beamng"]["instance_name"])
@@ -529,10 +547,11 @@ async def beamng_start(ctx):
             await ctx.send(f'Failed to start the server. HTTP status code: {status_code}')
 
 
-@beamng.command(name='stop', help=GAME_CONFIGS["beamng"]["stop"]["help"])
+@beamng.command(name='stop', help=GAME_CONFIGS["beamng"]["stop"]["help"], aliases=['st'])
+@commands.cooldown(COMMAND_COOLDOWN_RATE, COMMAND_COOLDOWN_PER, commands.BucketType.user)
 async def beamng_stop(ctx):
     async with ctx.typing():
-        success = await stop_instance(GAME_CONFIGS["beamng"]["instance_name"])
+        success, status_code = await stop_instance(GAME_CONFIGS["beamng"]["instance_name"])
 
         if success:
             await ctx.send(GAME_CONFIGS["beamng"]["stop"]["success_msg"])
@@ -540,7 +559,8 @@ async def beamng_stop(ctx):
             await ctx.send(f'Failed to stop the server. HTTP status code: {status_code}')
 
 
-@beamng.command(name='restart', help=GAME_CONFIGS["beamng"]["restart"]["help"])
+@beamng.command(name='restart', help=GAME_CONFIGS["beamng"]["restart"]["help"], aliases=['r'])
+@commands.cooldown(COMMAND_COOLDOWN_RATE, COMMAND_COOLDOWN_PER, commands.BucketType.user)
 async def beamng_restart(ctx):
     async with ctx.typing():
         success, status_code = await restart_instance(GAME_CONFIGS["beamng"]["instance_name"])
@@ -574,7 +594,7 @@ async def sotf_info(ctx):
             embed = build_info_embed(GAME_CONFIGS["sotf"], running_status)
             await ctx.send(embed=embed)
         else:
-            await ctx.send(f'Failed to get server info. HTTP status code: 500')
+            await ctx.send(f'Failed to get server info. HTTP status code: {status_code}')
 
 
 @sotf.command(name='start', help=GAME_CONFIGS["sotf"]["start"]["help"])
@@ -589,7 +609,8 @@ async def sotf_start(ctx):
             await ctx.send(f'Failed to start the server. HTTP status code: {status_code}')
 
 
-@sotf.command(name='stop', help=GAME_CONFIGS["sotf"]["stop"]["help"])
+@sotf.command(name='stop', help=GAME_CONFIGS["sotf"]["stop"]["help"], aliases=['st'])
+@commands.cooldown(COMMAND_COOLDOWN_RATE, COMMAND_COOLDOWN_PER, commands.BucketType.user)
 async def sotf_stop(ctx):
     async with ctx.typing():
         success = await stop_instance(GAME_CONFIGS["sotf"]["instance_name"])
@@ -634,10 +655,11 @@ async def enshrouded_info(ctx):
             embed = build_info_embed(GAME_CONFIGS["enshrouded"], running_status)
             await ctx.send(embed=embed)
         else:
-            await ctx.send(f'Failed to get server info. HTTP status code: 500')
+            await ctx.send(f'Failed to get server info. HTTP status code: {status_code}')
 
 
-@enshrouded.command(name='start', help=GAME_CONFIGS["enshrouded"]["start"]["help"])
+@enshrouded.command(name='start', help=GAME_CONFIGS["enshrouded"]["start"]["help"], aliases=['s'])
+@commands.cooldown(COMMAND_COOLDOWN_RATE, COMMAND_COOLDOWN_PER, commands.BucketType.user)
 async def enshrouded_start(ctx):
     async with ctx.typing():
         success, status_code = await start_instance(GAME_CONFIGS["enshrouded"]["instance_name"])
@@ -649,10 +671,11 @@ async def enshrouded_start(ctx):
             await ctx.send(f'Failed to start the server. HTTP status code: {status_code}')
 
 
-@enshrouded.command(name='stop', help=GAME_CONFIGS["enshrouded"]["stop"]["help"])
+@enshrouded.command(name='stop', help=GAME_CONFIGS["enshrouded"]["stop"]["help"], aliases=['st'])
+@commands.cooldown(COMMAND_COOLDOWN_RATE, COMMAND_COOLDOWN_PER, commands.BucketType.user)
 async def enshrouded_stop(ctx):
     async with ctx.typing():
-        success = await stop_instance(GAME_CONFIGS["enshrouded"]["instance_name"])
+        success, status_code = await stop_instance(GAME_CONFIGS["enshrouded"]["instance_name"])
 
         if success:
             await ctx.send(GAME_CONFIGS["enshrouded"]["stop"]["success_msg"])
@@ -694,10 +717,11 @@ async def palworld_info(ctx):
             embed = build_info_embed(GAME_CONFIGS["palworld"], running_status)
             await ctx.send(embed=embed)
         else:
-            await ctx.send(f'Failed to get server info. HTTP status code: 500')
+            await ctx.send(f'Failed to get server info. HTTP status code: {status_code}')
 
 
-@palworld.command(name='start', help=GAME_CONFIGS["palworld"]["start"]["help"])
+@palworld.command(name='start', help=GAME_CONFIGS["palworld"]["start"]["help"], aliases=['s'])
+@commands.cooldown(COMMAND_COOLDOWN_RATE, COMMAND_COOLDOWN_PER, commands.BucketType.user)
 async def palworld_start(ctx):
     async with ctx.typing():
         success, status_code = await start_instance(GAME_CONFIGS["palworld"]["instance_name"])
@@ -720,7 +744,8 @@ async def palworld_stop(ctx):
             await ctx.send(f'Failed to stop the server. HTTP status code: {status_code}')
 
 
-@palworld.command(name='restart', help=GAME_CONFIGS["palworld"]["restart"]["help"])
+@palworld.command(name='restart', help=GAME_CONFIGS["palworld"]["restart"]["help"], aliases=['r'])
+@commands.cooldown(COMMAND_COOLDOWN_RATE, COMMAND_COOLDOWN_PER, commands.BucketType.user)
 async def palworld_restart(ctx):
     async with ctx.typing():
         success, status_code = await restart_instance(GAME_CONFIGS["palworld"]["instance_name"])
@@ -777,7 +802,8 @@ async def atm10_start(ctx):
             await ctx.send(f'Failed to start the server: {message}')
 
 
-@atm10.command(name='stop', help=GAME_CONFIGS["atm10"]["stop"]["help"])
+@atm10.command(name='stop', help=GAME_CONFIGS["atm10"]["stop"]["help"], aliases=['st'])
+@commands.cooldown(COMMAND_COOLDOWN_RATE, COMMAND_COOLDOWN_PER, commands.BucketType.user)
 async def atm10_stop(ctx):
     async with ctx.typing():
         success, message = await stop_batch_server("atm10")
@@ -811,7 +837,7 @@ async def atm10_restart(ctx):
 
 @atm10.command(name='forcekill', help="Forcefully kills all Java and cmd.exe processes related to the server.")
 async def atm10_forcekill(ctx):
-    AUTHORIZED_USER_ID = 179025046872784896
+    from sensitive import AUTHORIZED_USER_ID
     
     if ctx.author.id != AUTHORIZED_USER_ID:
         await ctx.send('❌ You do not have permission to use this command.')
