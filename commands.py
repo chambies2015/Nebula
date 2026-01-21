@@ -362,7 +362,7 @@ async def satisfactory_start(ctx):
 @satisfactory.command(name='stop', help=GAME_CONFIGS["satisfactory"]["stop"]["help"])
 async def satisfactory_stop(ctx):
     async with ctx.typing():
-        success = await stop_instance(GAME_CONFIGS["satisfactory"]["instance_name"])
+        success, status_code = await stop_instance(GAME_CONFIGS["satisfactory"]["instance_name"])
 
         if success:
             await ctx.send(GAME_CONFIGS["satisfactory"]["stop"]["success_msg"])
@@ -488,7 +488,7 @@ async def projectzomboid_start(ctx):
 @commands.cooldown(COMMAND_COOLDOWN_RATE, COMMAND_COOLDOWN_PER, commands.BucketType.user)
 async def projectzomboid_stop(ctx):
     async with ctx.typing():
-        success = await stop_instance(GAME_CONFIGS["projectzomboid"]["instance_name"])
+        success, status_code = await stop_instance(GAME_CONFIGS["projectzomboid"]["instance_name"])
 
         if success:
             await ctx.send(GAME_CONFIGS["projectzomboid"]["stop"]["success_msg"])
@@ -613,7 +613,7 @@ async def sotf_start(ctx):
 @commands.cooldown(COMMAND_COOLDOWN_RATE, COMMAND_COOLDOWN_PER, commands.BucketType.user)
 async def sotf_stop(ctx):
     async with ctx.typing():
-        success = await stop_instance(GAME_CONFIGS["sotf"]["instance_name"])
+        success, status_code = await stop_instance(GAME_CONFIGS["sotf"]["instance_name"])
 
         if success:
             await ctx.send(GAME_CONFIGS["sotf"]["stop"]["success_msg"])
