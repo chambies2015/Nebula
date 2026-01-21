@@ -336,13 +336,13 @@ GAME_CONFIGS = {
         }
     },
     "atm10": {
-        "batch_script_path": "",
-        "group_help": "ATM10 Minecraft server commands (batch script based)",
+        "batch_script_path": "C:\\ATM10\\startserver.bat",
+        "group_help": "ATM10 Minecraft server commands",
         "embed_title": "ATM10 Bot Commands",
         "info": {
             "help": "Displays the server info for the ATM10 Minecraft server.",
             "embed_title": "ATM10 Server Details",
-            "ip": "localhost",
+            "ip": "67.4.161.61",
             "port": "25566",
             "status_template": 'The ATM10 server is currently {"running" if running_status else "not running"}.'
         },
