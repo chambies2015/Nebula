@@ -1,2 +1,5 @@
 # created by virtualenv automatically
 tokens.py
+Lib/
+Scripts/
+.idea/
