@@ -811,6 +811,12 @@ async def atm10_restart(ctx):
 
 @atm10.command(name='forcekill', help="Forcefully kills all Java and cmd.exe processes related to the server.")
 async def atm10_forcekill(ctx):
+    AUTHORIZED_USER_ID = 179025046872784896
+    
+    if ctx.author.id != AUTHORIZED_USER_ID:
+        await ctx.send('❌ You do not have permission to use this command.')
+        return
+    
     async with ctx.typing():
         success, message = await force_kill_all_processes("atm10")
         

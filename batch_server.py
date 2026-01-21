@@ -172,8 +172,10 @@ async def stop_batch_server(server_name):
                                         print(f"[{server_name}] WARNING: Java process (PID: {java_proc.pid}) still running after kill attempt")
                                     else:
                                         print(f"[{server_name}] Java process (PID: {java_proc.pid}) killed successfully")
-                        except (psutil.NoSuchProcess, psutil.AccessDenied) as e:
-                            print(f"[{server_name}] Error stopping Java process (PID: {java_proc.pid}): {e}")
+                        except psutil.NoSuchProcess:
+                            print(f"[{server_name}] Java process (PID: {java_proc.pid}) already exited (likely stopped with other processes)")
+                        except psutil.AccessDenied as e:
+                            print(f"[{server_name}] ERROR: Access denied when stopping Java process (PID: {java_proc.pid}): {e}")
                     
                     for java_proc in java_processes:
                         await stop_java_process(java_proc)
@@ -329,8 +331,11 @@ async def force_kill_all_processes(server_name):
                         killed_count += 1
                     else:
                         print(f"[{server_name}] FORCE KILL: WARNING - Java process PID {java_proc.pid} still running")
-                except (psutil.NoSuchProcess, psutil.AccessDenied) as e:
-                    print(f"[{server_name}] FORCE KILL: Error killing Java process: {e}")
+                except psutil.NoSuchProcess:
+                    print(f"[{server_name}] FORCE KILL: Java process PID {java_proc.pid} already exited")
+                    killed_count += 1
+                except psutil.AccessDenied as e:
+                    print(f"[{server_name}] FORCE KILL: ERROR - Access denied killing Java process PID {java_proc.pid}: {e}")
             
             for cmd_proc in cmd_processes:
                 try:
@@ -349,8 +354,11 @@ async def force_kill_all_processes(server_name):
                         killed_count += 1
                     else:
                         print(f"[{server_name}] FORCE KILL: WARNING - cmd.exe process PID {cmd_proc.pid} still running")
-                except (psutil.NoSuchProcess, psutil.AccessDenied) as e:
-                    print(f"[{server_name}] FORCE KILL: Error killing cmd.exe process: {e}")
+                except psutil.NoSuchProcess:
+                    print(f"[{server_name}] FORCE KILL: cmd.exe process PID {cmd_proc.pid} already exited")
+                    killed_count += 1
+                except psutil.AccessDenied as e:
+                    print(f"[{server_name}] FORCE KILL: ERROR - Access denied killing cmd.exe process PID {cmd_proc.pid}: {e}")
             
             if server_name in processes:
                 processes[server_name] = None
