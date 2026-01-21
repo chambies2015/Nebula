@@ -3,10 +3,11 @@ from discord.ext import commands
 from discord.ext.commands import check, CommandOnCooldown, MissingPermissions, CheckFailure
 import tokens
 from config import ALLOWED_CHANNELS
-from amp_client import API, login
+from amp_client import API, login, get_instance_statuses
 import commands as game_commands
 from exceptions import AMPAPIError, AuthenticationError
 from logger import setup_logger
+from sensitive import AUTHORIZED_USER_ID
 
 logger = setup_logger("main")
 
@@ -25,16 +26,23 @@ def is_allowed_channel(ctx):
 bot.add_check(check(is_allowed_channel))
 
 
-# @bot.command(name="getinstances")
-# async def get_instances(ctx):
-#     await login()
-#     headers = {'Content-type': 'application/json', 'Accept': 'text/javascript'}
-#     data = {
-#         "SESSIONID": token
-#     }
-#     response = requests.post(url_Instances_Status, data=json.dumps(data), headers=headers)
-#     test = response.content
-#     print(test)
+@bot.command(name="getinstances", help="Get status of all AMP instances (authorized users only)")
+async def get_instances(ctx):
+    if ctx.author.id != AUTHORIZED_USER_ID:
+        await ctx.send('❌ You do not have permission to use this command.')
+        return
+    
+    async with ctx.typing():
+        result, status_code = await get_instance_statuses()
+        if result is not None:
+            import json
+            formatted_json = json.dumps(result, indent=2)
+            if len(formatted_json) > 2000:
+                await ctx.send(f'```json\n{formatted_json[:1900]}...\n```')
+            else:
+                await ctx.send(f'```json\n{formatted_json}\n```')
+        else:
+            await ctx.send(f'❌ Failed to get instance statuses. HTTP status code: {status_code}')
 
 
 @bot.event

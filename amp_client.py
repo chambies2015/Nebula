@@ -5,7 +5,7 @@ import time
 import tokens
 from ampapi.ampapi import AMPAPI
 import discord
-from config import AMP_BASE_URL, URL_LOGIN, URL_GET_INSTANCE, URL_START, URL_STOP, URL_RESTART
+from config import AMP_BASE_URL, URL_LOGIN, URL_GET_INSTANCE, URL_START, URL_STOP, URL_RESTART, URL_INSTANCES_STATUS
 from typing import Optional, Tuple
 from logger import setup_logger
 
@@ -186,3 +186,25 @@ async def restart_instance(instance_name: str) -> Tuple[bool, int]:
     except Exception as e:
         logger.error(f"Error restarting instance: {e}", exc_info=True)
         return False, 500
+
+
+async def get_instance_statuses() -> Tuple[Optional[dict], int]:
+    if not await ensure_authenticated():
+        return None, 401
+    
+    data = {
+        "SESSIONID": token
+    }
+    headers = {'Content-type': 'application/json', 'Accept': 'text/javascript'}
+    
+    session = await get_session()
+    try:
+        async with session.post(URL_INSTANCES_STATUS, data=json.dumps(data), headers=headers) as resp:
+            if resp.status == 200:
+                response_content = await resp.text()
+                json_response = json.loads(response_content)
+                return json_response, resp.status
+            return None, resp.status
+    except Exception as e:
+        logger.error(f"Error getting instance statuses: {e}", exc_info=True)
+        return None, 500
