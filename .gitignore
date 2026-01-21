@@ -1,5 +1,9 @@
 # created by virtualenv automatically
 tokens.py
+sensitive.py
 Lib/
 Scripts/
 .idea/
+__pycache__/
+*.pyc
+*.log
