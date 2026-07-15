@@ -1,10 +1,12 @@
 import asyncio
+from pathlib import Path
+
 import discord
 from discord.ext import commands
-from typing import Optional
 from config import GAME_CONFIGS, START_DELAY_SECONDS, COMMAND_COOLDOWN_RATE, COMMAND_COOLDOWN_PER
-from amp_client import login, get_instance_status, build_info_embed, start_instance, stop_instance, restart_instance
+from amp_client import get_instance_status, build_info_embed, start_instance, stop_instance, restart_instance
 from batch_server import start_batch_server, stop_batch_server, is_server_running, force_kill_all_processes
+from palworld_api import is_configured as rest_api_is_configured, save_and_shutdown
 from sensitive import AUTHORIZED_USER_ID
 
 
@@ -13,8 +15,6 @@ def create_game_group(game_key: str, game_config: dict, use_amp: bool = True):
     async def group(ctx: commands.Context) -> None:
         if ctx.invoked_subcommand is None:
             async with ctx.typing():
-                if use_amp:
-                    await login()
                 embed = discord.Embed(
                     title=game_config["embed_title"],
                     description="These are the available commands",
@@ -27,6 +27,43 @@ def create_game_group(game_key: str, game_config: dict, use_amp: bool = True):
     return group
 
 
+async def stop_batch_game(game_key: str, game_config: dict):
+    rest_api_config = game_config.get("rest_api")
+    if rest_api_is_configured(rest_api_config):
+        return await save_and_shutdown(rest_api_config)
+
+    return await stop_batch_server(
+        game_key,
+        game_config.get("process_match_terms"),
+    )
+
+
+async def wait_for_batch_server_stop(game_key: str, game_config: dict) -> bool:
+    rest_api_config = game_config.get("rest_api") or {}
+    timeout_seconds = rest_api_config.get("shutdown_wait_seconds", 0) + 45
+
+    for _ in range(timeout_seconds):
+        if not is_server_running(game_key, game_config.get("process_match_terms")):
+            return True
+        await asyncio.sleep(1)
+    return False
+
+
+async def send_info_embed(ctx: commands.Context, embed: discord.Embed, info_config: dict) -> None:
+    package_path = info_config.get("mod_package_path")
+    if package_path and Path(package_path).is_file():
+        await ctx.send(
+            embed=embed,
+            file=discord.File(
+                package_path,
+                filename=info_config.get("mod_package_filename") or Path(package_path).name,
+            ),
+        )
+        return
+
+    await ctx.send(embed=embed)
+
+
 def create_info_command(group: commands.Group, game_key: str, game_config: dict, use_amp: bool = True):
     @group.command(name='info', help=game_config["info"]["help"])
     async def info_cmd(ctx: commands.Context) -> None:
@@ -35,18 +72,27 @@ def create_info_command(group: commands.Group, game_key: str, game_config: dict,
                 running_status, status_code = await get_instance_status(game_config["instance_id"])
                 if running_status is not None:
                     embed = build_info_embed(game_config, running_status)
-                    await ctx.send(embed=embed)
+                    await send_info_embed(ctx, embed, game_config["info"])
                 else:
                     await ctx.send(f'Failed to get server info. HTTP status code: {status_code}')
             else:
-                running_status = is_server_running(game_key)
+                running_status = is_server_running(
+                    game_key,
+                    game_config.get("process_match_terms"),
+                )
                 info_config = game_config["info"]
                 embed = discord.Embed(title=info_config["embed_title"], color=discord.Color.blue())
                 embed.add_field(name='Server IP', value=info_config["ip"], inline=False)
                 embed.add_field(name='Server Port', value=info_config["port"], inline=False)
+                if "name" in info_config:
+                    embed.add_field(name='Server Name', value=info_config["name"], inline=False)
+                if "password" in info_config:
+                    embed.add_field(name='Server Password', value=info_config["password"], inline=False)
+                if "mod_list" in info_config:
+                    embed.add_field(name='Mod List', value=info_config["mod_list"], inline=False)
                 status_text = f'The {game_key.upper()} server is currently {"running" if running_status else "not running"}.'
                 embed.add_field(name='Server Status', value=status_text, inline=False)
-                await ctx.send(embed=embed)
+                await send_info_embed(ctx, embed, info_config)
 
 
 def create_start_command(group: commands.Group, game_key: str, game_config: dict, use_amp: bool = True):
@@ -66,7 +112,12 @@ def create_start_command(group: commands.Group, game_key: str, game_config: dict
                 if not batch_path:
                     await ctx.send(f'Batch script path not configured. Please set {game_key}.batch_script_path in config.py')
                     return
-                success, message = await start_batch_server(game_key, batch_path)
+                success, message = await start_batch_server(
+                    game_key,
+                    batch_path,
+                    game_config.get("process_match_terms"),
+                    game_config.get("keep_console_open", True),
+                )
                 if success:
                     await ctx.send(game_config["start"]["success_msg"])
                 else:
@@ -85,7 +136,7 @@ def create_stop_command(group: commands.Group, game_key: str, game_config: dict,
                 else:
                     await ctx.send(f'Failed to stop the server. HTTP status code: {status_code}')
             else:
-                success, message = await stop_batch_server(game_key)
+                success, message = await stop_batch_game(game_key, game_config)
                 if success:
                     await ctx.send(game_config["stop"]["success_msg"])
                 else:
@@ -104,14 +155,25 @@ def create_restart_command(group: commands.Group, game_key: str, game_config: di
                 else:
                     await ctx.send(f'Failed to restart the server. HTTP status code: {status_code}')
             else:
-                success_stop, message_stop = await stop_batch_server(game_key)
-                if success_stop:
-                    await asyncio.sleep(2)
+                success_stop, message_stop = await stop_batch_game(game_key, game_config)
+                if not success_stop:
+                    await ctx.send(f'Failed to restart the server: {message_stop}')
+                    return
+
+                if not await wait_for_batch_server_stop(game_key, game_config):
+                    await ctx.send('Failed to restart the server: server did not stop before the timeout.')
+                    return
+
                 batch_path = game_config.get("batch_script_path")
                 if not batch_path:
                     await ctx.send(f'Batch script path not configured. Please set {game_key}.batch_script_path in config.py')
                     return
-                success_start, message_start = await start_batch_server(game_key, batch_path)
+                success_start, message_start = await start_batch_server(
+                    game_key,
+                    batch_path,
+                    game_config.get("process_match_terms"),
+                    game_config.get("keep_console_open", True),
+                )
                 if success_start:
                     await ctx.send(game_config["restart"]["success_msg"])
                 else:
@@ -146,16 +208,22 @@ def register_game_commands(game_key: str, game_config: dict, use_amp: bool = Tru
     return group
 
 
-ark = register_game_commands("ark", GAME_CONFIGS["ark"])
-terraria = register_game_commands("terraria", GAME_CONFIGS["terraria"])
-necesse = register_game_commands("necesse", GAME_CONFIGS["necesse"])
-icarus = register_game_commands("icarus", GAME_CONFIGS["icarus"])
-minecraft = register_game_commands("minecraft", GAME_CONFIGS["minecraft"])
-satisfactory = register_game_commands("satisfactory", GAME_CONFIGS["satisfactory"])
-sevendaystodie = register_game_commands("sevendaystodie", GAME_CONFIGS["sevendaystodie"])
-projectzomboid = register_game_commands("projectzomboid", GAME_CONFIGS["projectzomboid"])
-beamng = register_game_commands("beamng", GAME_CONFIGS["beamng"])
-sotf = register_game_commands("sotf", GAME_CONFIGS["sotf"])
-enshrouded = register_game_commands("enshrouded", GAME_CONFIGS["enshrouded"])
-palworld = register_game_commands("palworld", GAME_CONFIGS["palworld"])
-atm10 = register_game_commands("atm10", GAME_CONFIGS["atm10"], use_amp=False, has_forcekill=True)
+def uses_amp(game_config: dict) -> bool:
+    return game_config.get("use_amp", "instance_id" in game_config and "instance_name" in game_config)
+
+
+def has_forcekill(game_key: str, game_config: dict) -> bool:
+    return game_config.get("has_forcekill", game_key == "atm10")
+
+
+GAME_COMMANDS = {
+    game_key: register_game_commands(
+        game_key,
+        game_config,
+        use_amp=uses_amp(game_config),
+        has_forcekill=has_forcekill(game_key, game_config),
+    )
+    for game_key, game_config in GAME_CONFIGS.items()
+}
+
+globals().update(GAME_COMMANDS)

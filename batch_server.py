@@ -1,7 +1,6 @@
 import subprocess
 import asyncio
 import os
-import sys
 import signal
 from concurrent.futures import ThreadPoolExecutor
 from logger import setup_logger
@@ -12,44 +11,149 @@ processes = {}
 executor = ThreadPoolExecutor(max_workers=2)
 
 
-async def start_batch_server(server_name, batch_script_path):
+def _is_related_java_process(process_info, server_name):
+    name = process_info.get('name') or ''
+    if 'java.exe' not in name.lower() and 'java' != name.lower():
+        return False
+
+    cmdline = process_info.get('cmdline') or []
+    cmdline_text = ' '.join(str(arg) for arg in cmdline).lower()
+    match_terms = ['minecraft', 'server', 'forge', server_name.lower()]
+    if server_name.lower() == 'atm10':
+        match_terms.extend(['atm10', 'allthemods'])
+    return any(term in cmdline_text for term in match_terms)
+
+
+def _find_related_java_processes(server_name):
+    try:
+        import psutil
+    except ImportError:
+        return []
+
+    java_processes = []
+    for process in psutil.process_iter(['pid', 'name', 'cmdline']):
+        try:
+            if _is_related_java_process(process.info, server_name):
+                java_processes.append(process)
+        except (psutil.NoSuchProcess, psutil.AccessDenied):
+            continue
+    return java_processes
+
+
+async def _get_related_java_processes(server_name):
+    loop = asyncio.get_event_loop()
+    return await loop.run_in_executor(executor, _find_related_java_processes, server_name)
+
+
+def _is_related_process(process_info, match_terms):
+    name = (process_info.get('name') or '').lower()
+    return any(name == term.lower() for term in match_terms)
+
+
+def _find_related_processes(match_terms):
+    try:
+        import psutil
+    except ImportError:
+        return []
+
+    related_processes = []
+    for process in psutil.process_iter(['pid', 'name', 'cmdline']):
+        try:
+            if _is_related_process(process.info, match_terms):
+                related_processes.append(process)
+        except (psutil.NoSuchProcess, psutil.AccessDenied):
+            continue
+    return related_processes
+
+
+async def _get_related_processes(server_name, process_match_terms=None):
+    if process_match_terms:
+        loop = asyncio.get_event_loop()
+        return await loop.run_in_executor(executor, _find_related_processes, process_match_terms)
+    return await _get_related_java_processes(server_name)
+
+
+async def _stop_matching_windows_processes(server_name, process_match_terms, tracked_process):
+    try:
+        import psutil
+    except ImportError:
+        return False, "psutil is required to stop this server"
+
+    related_processes = await _get_related_processes(server_name, process_match_terms)
+    if not related_processes and (tracked_process is None or tracked_process.poll() is not None):
+        return False, "Server is not running"
+
+    loop = asyncio.get_event_loop()
+
+    def stop_processes():
+        for process in related_processes:
+            try:
+                process.terminate()
+            except (psutil.NoSuchProcess, psutil.AccessDenied):
+                continue
+
+        _, still_running = psutil.wait_procs(related_processes, timeout=10)
+        for process in still_running:
+            try:
+                process.kill()
+            except (psutil.NoSuchProcess, psutil.AccessDenied):
+                continue
+
+        _, still_running = psutil.wait_procs(still_running, timeout=5)
+        return [process.pid for process in still_running]
+
+    remaining_pids = await loop.run_in_executor(executor, stop_processes)
+
+    if tracked_process is not None and tracked_process.poll() is None:
+        try:
+            await loop.run_in_executor(executor, tracked_process.terminate)
+        except OSError:
+            pass
+
+    processes[server_name] = None
+    if remaining_pids:
+        return False, f"Unable to stop process(es): {', '.join(map(str, remaining_pids))}"
+    return True, "Server stopped successfully"
+
+
+async def start_batch_server(
+    server_name,
+    batch_script_path,
+    process_match_terms=None,
+    keep_console_open=True,
+):
     logger.info(f"[{server_name}] Attempting to start server...")
     logger.info(f"[{server_name}] Batch script path: {batch_script_path}")
     
     if server_name in processes and processes[server_name] is not None:
         if processes[server_name].poll() is None:
-            logger.error(f"[{server_name}] ERROR: Server is already running (PID: {processes[server_name].pid})")
-            return False, "Server is already running"
+            if process_match_terms and os.name == 'nt':
+                related_processes = await _get_related_processes(server_name, process_match_terms)
+                if not related_processes:
+                    logger.warning(f"[{server_name}] Closing stale command process (PID: {processes[server_name].pid})")
+                    try:
+                        processes[server_name].terminate()
+                    except OSError:
+                        pass
+                    processes[server_name] = None
+                else:
+                    logger.error(f"[{server_name}] ERROR: Server is already running (PID: {processes[server_name].pid})")
+                    return False, "Server is already running"
+            else:
+                logger.error(f"[{server_name}] ERROR: Server is already running (PID: {processes[server_name].pid})")
+                return False, "Server is already running"
     
     try:
         if os.name == 'nt':
-            logger.info(f"[{server_name}] Checking for existing Java/Minecraft processes...")
-            try:
-                import psutil
-                
-                def check_java_processes():
-                    java_processes = []
-                    for p in psutil.process_iter(['pid', 'name', 'cmdline']):
-                        try:
-                            if p.info['name'] and 'java.exe' in p.info['name'].lower():
-                                cmdline = p.info['cmdline']
-                                if cmdline and any('minecraft' in str(arg).lower() or 'server' in str(arg).lower() or 'forge' in str(arg).lower() for arg in cmdline):
-                                    java_processes.append(p)
-                        except (psutil.NoSuchProcess, psutil.AccessDenied):
-                            continue
-                    return java_processes
-                
-                loop = asyncio.get_event_loop()
-                java_processes = await loop.run_in_executor(executor, check_java_processes)
-                
-                if java_processes:
-                    logger.warning(f"[{server_name}] WARNING: Found {len(java_processes)} existing Java/Minecraft process(es)")
-                    for p in java_processes:
-                        logger.info(f"[{server_name}]   - PID: {p.pid}")
-                    logger.error(f"[{server_name}] ERROR: Found {len(java_processes)} existing Java/Minecraft process(es). Please stop the server first or wait for processes to fully terminate.")
-                    return False, f"Found {len(java_processes)} existing Java/Minecraft process(es). Server may still be shutting down."
-            except ImportError:
-                logger.info(f"[{server_name}] psutil not available, skipping Java process check")
+            process_label = "matching server" if process_match_terms else "Java/Minecraft"
+            logger.info(f"[{server_name}] Checking for existing {process_label} processes...")
+            related_processes = await _get_related_processes(server_name, process_match_terms)
+            if related_processes:
+                logger.warning(f"[{server_name}] WARNING: Found {len(related_processes)} existing {process_label} process(es)")
+                for p in related_processes:
+                    logger.info(f"[{server_name}]   - PID: {p.pid}")
+                logger.error(f"[{server_name}] ERROR: Found {len(related_processes)} existing {process_label} process(es). Please stop the server first or wait for processes to fully terminate.")
+                return False, f"Found {len(related_processes)} existing {process_label} process(es). Server may still be shutting down."
         
         if not os.path.exists(batch_script_path):
             logger.error(f"[{server_name}] ERROR: Batch script not found at: {batch_script_path}")
@@ -57,8 +161,9 @@ async def start_batch_server(server_name, batch_script_path):
         
         logger.info(f"[{server_name}] Starting batch script...")
         if os.name == 'nt':
+            command_mode = '/k' if keep_console_open else '/c'
             proc = subprocess.Popen(
-                ['cmd.exe', '/k', batch_script_path],
+                ['cmd.exe', command_mode, batch_script_path],
                 creationflags=subprocess.CREATE_NEW_CONSOLE
             )
             logger.info(f"[{server_name}] Process started with PID: {proc.pid}")
@@ -78,6 +183,8 @@ async def start_batch_server(server_name, batch_script_path):
             logger.info(f"[{server_name}] SUCCESS: Server process is running (PID: {proc.pid})")
         else:
             logger.warning(f"[{server_name}] WARNING: Process exited immediately with code: {proc.poll()}")
+            processes[server_name] = None
+            return False, f"Server process exited immediately with code {proc.poll()}"
         
         return True, "Server started successfully"
     except Exception as e:
@@ -87,8 +194,16 @@ async def start_batch_server(server_name, batch_script_path):
         return False, f"Failed to start server: {str(e)}"
 
 
-async def stop_batch_server(server_name):
+async def stop_batch_server(server_name, process_match_terms=None):
     logger.info(f"[{server_name}] Attempting to stop server...")
+
+    tracked_process = processes.get(server_name)
+    if os.name == 'nt' and process_match_terms:
+        return await _stop_matching_windows_processes(
+            server_name,
+            process_match_terms,
+            tracked_process,
+        )
     
     if server_name not in processes or processes[server_name] is None:
         logger.info(f"[{server_name}] ERROR: Server process not found in tracked processes")
@@ -107,21 +222,7 @@ async def stop_batch_server(server_name):
             try:
                 import psutil
                 logger.info(f"[{server_name}] Searching for Java/Minecraft server process...")
-                
-                def find_java_processes():
-                    java_processes = []
-                    for p in psutil.process_iter(['pid', 'name', 'cmdline']):
-                        try:
-                            if p.info['name'] and 'java.exe' in p.info['name'].lower():
-                                cmdline = p.info['cmdline']
-                                if cmdline and any('minecraft' in str(arg).lower() or 'server' in str(arg).lower() or 'forge' in str(arg).lower() for arg in cmdline):
-                                    java_processes.append(p)
-                        except (psutil.NoSuchProcess, psutil.AccessDenied):
-                            continue
-                    return java_processes
-                
-                loop = asyncio.get_event_loop()
-                java_processes = await loop.run_in_executor(executor, find_java_processes)
+                java_processes = await _get_related_java_processes(server_name)
                 
                 if java_processes:
                     for java_proc in java_processes:
@@ -380,8 +481,25 @@ async def force_kill_all_processes(server_name):
         return False, "Force kill only available on Windows"
 
 
-def is_server_running(server_name):
+def is_server_running(server_name, process_match_terms=None):
+    if os.name == 'nt' and process_match_terms:
+        related_processes = _find_related_processes(process_match_terms)
+        if related_processes:
+            logger.info(f"[{server_name}] Status check: Found {len(related_processes)} related process(es)")
+            return True
+        processes[server_name] = None
+        return False
+
     if server_name not in processes or processes[server_name] is None:
+        if os.name == 'nt':
+            related_processes = (
+                _find_related_processes(process_match_terms)
+                if process_match_terms
+                else _find_related_java_processes(server_name)
+            )
+            if related_processes:
+                logger.info(f"[{server_name}] Status check: Found {len(related_processes)} related process(es)")
+                return True
         return False
     proc = processes[server_name]
     is_running = proc.poll() is None

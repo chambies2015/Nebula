@@ -3,9 +3,9 @@ from discord.ext import commands
 from discord.ext.commands import check, CommandOnCooldown, MissingPermissions, CheckFailure
 import tokens
 from config import ALLOWED_CHANNELS
-from amp_client import API, login, get_instance_statuses
+from amp_client import close_session, get_instance_statuses
 import commands as game_commands
-from exceptions import AMPAPIError, AuthenticationError
+from exceptions import AMPAPIError
 from logger import setup_logger
 from sensitive import AUTHORIZED_USER_ID
 
@@ -48,25 +48,10 @@ async def get_instances(ctx):
 @bot.event
 async def on_ready():
     logger.info(f'{bot.user} has connected to Discord!')
-    
-    success = await login()
-    if not success:
-        logger.warning("Initial login failed. Bot may not function correctly.")
 
 
-bot.add_command(game_commands.ark)
-bot.add_command(game_commands.terraria)
-bot.add_command(game_commands.necesse)
-bot.add_command(game_commands.icarus)
-bot.add_command(game_commands.minecraft)
-bot.add_command(game_commands.satisfactory)
-bot.add_command(game_commands.sevendaystodie)
-bot.add_command(game_commands.projectzomboid)
-bot.add_command(game_commands.beamng)
-bot.add_command(game_commands.sotf)
-bot.add_command(game_commands.enshrouded)
-bot.add_command(game_commands.palworld)
-bot.add_command(game_commands.atm10)
+for game_command in game_commands.GAME_COMMANDS.values():
+    bot.add_command(game_command)
 
 
 @bot.event
@@ -121,4 +106,9 @@ async def help(ctx):
     await ctx.send(embed=embed)
 
 
-bot.run(bot_token)
+try:
+    bot.run(bot_token)
+finally:
+    import asyncio
+
+    asyncio.run(close_session())

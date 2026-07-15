@@ -1,4 +1,3 @@
-import asyncio
 import json
 import aiohttp
 import time
@@ -24,6 +23,13 @@ async def get_session() -> aiohttp.ClientSession:
     if _session is None or _session.closed:
         _session = aiohttp.ClientSession()
     return _session
+
+
+async def close_session() -> None:
+    global _session
+    if _session is not None and not _session.closed:
+        await _session.close()
+    _session = None
 
 
 async def ensure_authenticated() -> bool:
@@ -78,6 +84,45 @@ async def login() -> bool:
     except Exception as e:
         logger.error(f"Login error: {e}", exc_info=True)
         return False
+
+
+def _response_indicates_success(response_body) -> bool:
+    if isinstance(response_body, bool):
+        return response_body
+    if not isinstance(response_body, dict):
+        return True
+
+    for key in ("success", "Success"):
+        if key in response_body:
+            return bool(response_body[key])
+
+    result = response_body.get("result")
+    if isinstance(result, bool):
+        return result
+    if isinstance(result, dict):
+        return _response_indicates_success(result)
+
+    if response_body.get("error") or response_body.get("Error"):
+        return False
+
+    return True
+
+
+async def amp_action_succeeded(resp: aiohttp.ClientResponse) -> bool:
+    if resp.status != 200:
+        return False
+
+    response_content = await resp.text()
+    if not response_content.strip():
+        return True
+
+    try:
+        json_response = json.loads(response_content)
+    except json.JSONDecodeError:
+        logger.warning(f"AMP returned non-JSON success response: {response_content[:200]}")
+        return True
+
+    return _response_indicates_success(json_response)
 
 
 async def get_instance_status(instance_id: str) -> Tuple[Optional[bool], int]:
@@ -144,7 +189,7 @@ async def start_instance(instance_name: str) -> Tuple[bool, int]:
     session = await get_session()
     try:
         async with session.post(URL_START, data=json.dumps(data), headers=headers) as resp:
-            return resp.status == 200, resp.status
+            return await amp_action_succeeded(resp), resp.status
     except Exception as e:
         logger.error(f"Error starting instance: {e}", exc_info=True)
         return False, 500
@@ -163,7 +208,7 @@ async def stop_instance(instance_name: str) -> Tuple[bool, int]:
     session = await get_session()
     try:
         async with session.post(URL_STOP, data=json.dumps(data), headers=headers) as resp:
-            return resp.status == 200, resp.status
+            return await amp_action_succeeded(resp), resp.status
     except Exception as e:
         logger.error(f"Error stopping instance: {e}", exc_info=True)
         return False, 500
@@ -182,7 +227,7 @@ async def restart_instance(instance_name: str) -> Tuple[bool, int]:
     session = await get_session()
     try:
         async with session.post(URL_RESTART, data=json.dumps(data), headers=headers) as resp:
-            return resp.status == 200, resp.status
+            return await amp_action_succeeded(resp), resp.status
     except Exception as e:
         logger.error(f"Error restarting instance: {e}", exc_info=True)
         return False, 500

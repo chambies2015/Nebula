@@ -7,3 +7,8 @@ Scripts/
 __pycache__/
 *.pyc
 *.log
+.palworld-mod-build/
+.tools/
+palworld_mods/
+dist/
+docs/

@@ -1,3 +1,4 @@
+import sensitive
 from sensitive import SERVER_IPS, SERVER_PASSWORDS
 
 ALLOWED_CHANNELS = ["1014955844913332334", "939660290172268583", "809544965386272790"]
@@ -316,8 +317,20 @@ GAME_CONFIGS = {
         }
     },
     "palworld": {
-        "instance_id": "7e948276-2b9a-44fc-a40a-88db2e3d25b0",
-        "instance_name": "Palworld01",
+        "use_amp": False,
+        "batch_script_path": "C:\\Users\\xeonc\\Desktop\\StarDrop\\Nebula\\start_palworld.bat",
+        "keep_console_open": False,
+        "process_match_terms": (
+            "palserver.exe",
+            "palserver-win64-shipping.exe",
+            "palserver-win64-shipping-cmd.exe",
+        ),
+        "rest_api": {
+            "base_url": "http://127.0.0.1:8212/v1/api",
+            "username": getattr(sensitive, "PALWORLD_REST_API_USERNAME", "admin"),
+            "password": getattr(sensitive, "PALWORLD_ADMIN_PASSWORD", ""),
+            "shutdown_wait_seconds": 15,
+        },
         "group_help": "Palworld commands to start, stop, restart, and get info on the server",
         "embed_title": "Palworld Commands",
         "info": {
@@ -326,6 +339,11 @@ GAME_CONFIGS = {
             "ip": SERVER_IPS["palworld"],
             "port": "8211",
             "password": SERVER_PASSWORDS["palworld"],
+            "mod_list": (
+                "[UE4SS (Steam Workshop)](https://steamcommunity.com/sharedfiles/filedetails/?id=3625223587)\n"
+                "[PalSchema (Steam Workshop)](https://steamcommunity.com/sharedfiles/filedetails/?id=3625280368)\n"
+                "[NebulaMaxBases (Steam Workshop)](https://steamcommunity.com/sharedfiles/filedetails/?id=3762782874)"
+            ),
             "status_template": 'The Palworld server is currently {"running" if running_status else "not running"}.'
         },
         "start": {
@@ -333,8 +351,8 @@ GAME_CONFIGS = {
             "success_msg": "Successfully started spooling up the Palworld server!"
         },
         "stop": {
-            "help": "Sends a stop signal to the Palworld game server.",
-            "success_msg": "Successfully sent a stop signal to the server! Give it time to stop completely."
+            "help": "Saves the world and requests a Palworld server shutdown.",
+            "success_msg": "Palworld shutdown requested. Give it a moment to save and close."
         },
         "restart": {
             "help": "Sends a restart signal to the Palworld game server, may take awhile.",

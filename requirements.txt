@@ -1,0 +1,4 @@
+aiohttp
+ampapi
+discord.py
+psutil
